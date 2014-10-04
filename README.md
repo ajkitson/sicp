@@ -1,0 +1,1 @@
+Exercises for Structure and Interpretation of Computer Programs. Using mit-scheme. Some of these files are actual programs, while others I've copied and pasted from the scheme REPL so they'll have the output in addition to the evaluated code.
