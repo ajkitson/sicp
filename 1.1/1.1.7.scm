@@ -56,7 +56,7 @@
 (define (square x) (* x x))
 
 (define (sqrt x)
-	(sqrt-iter 1.0 x x)) ; use 10.0 as old guess since 10x should be well outside whathever threshold we set in good-enough?
+	(sqrt-iter 1.0 10.0 x)) ; use 10.0 as old guess since 10x should be well outside whathever threshold we set in good-enough?
 
 ; This works better for the small and large number issues identified above. 
 ; In the case of the small number, it's much more accurate:
