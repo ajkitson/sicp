@@ -4,7 +4,7 @@
 ; ====
 ; Here's the count-change procedure:
 
-; pull highest coin available from purse
+; pull highest coin available (determined by coin-types-remaining) from purse
 (define (highest-coin-value coin-types-remaining) 
 	(cond ((= coin-types-remaining 1) 1)
 		((= coin-types-remaining 2) 5)
@@ -42,14 +42,16 @@
 ; cc 11 1 >> cc 10 1 + cc 11 0. But cc 11 0 terminates immediately, so you follow cc 10 1 down to cc 0 1, with each cc X 0 
 ; branch terminating as soon as it starts. 
 ; So with just pennies, we're looking at 2n steps to complete, or O(n).
+;
 ; Now, when we add nickles, we add a bunch of branches:
 ; - 1 nickel and the rest pennies (repeating that section of the all penny branch)
 ; - 2 nickles and the rest pennies (repeating a bit less of the all penny branch)
 ; - etc.
 ; So if before we had 2n steps, we now have n / <new denomination> new branches. Each of these new branches has between
 ; n / <new denomination> steps and 2(n - new denom) steps. 
-; So we're looking at something less than n squared.
+; So we're looking at something less than n squared... really a constant factor of n squared.
 ; If we add yet another denomination, the process repeats again, with fewer new branches created the greater the new
 ; denomination. 
-; But as n grows, the number of steps is growing at roughly the rate of n ^ (number of types of coins)
-; So for five denominations, it's roughly O(n^5). 
+; But as n grows, the number of steps is growing at roughly the rate of n ^ (number of types of coins) * constant 
+; factors that get smaller as the denomination gets larger. But contant factors don't matter here, so for five 
+; denominations, we're looking at O(n^5).
