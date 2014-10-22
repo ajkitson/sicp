@@ -22,7 +22,7 @@
 (gcd 40 (remainder 206 40)) ; 40 % 6 = 4, therefore: 
 
 (gcd (remainder 206 40) 
-	 (remainder 40 
+	(remainder 40 
 	 			(remainder 206 40))) ; 6 % 4 = 2, therefore:
 
 (gcd (remainder 40 
