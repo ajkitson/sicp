@@ -39,8 +39,6 @@
 
 ; returns if n squared % n is 1, then we return 0, otherwise n squared % m (which might also be 0)
 (define (sq-mod-check-sqrt1 n m)
-	(display n)
-	(display m)
 	(if (and (not (or (= n 1) (= n (- m 1))))  ;n !== 1 or m, and
 		(= 1 (remainder (* n n) m)))	 ; n squared % m == 1 >> we have a non-trivial sqrt of 1 mod m
 		0
@@ -67,7 +65,7 @@
 
 (define (prime-check-loop n)
 	(newline)
-	(cond ((< n 3) 
+	(cond ((< n 3) ; because we haven't built in handling for 0, 1, 2
 		(display "DONE!"))
 		(else
 			(display n)
@@ -75,3 +73,93 @@
 			(prime-check-loop (- n 1)))))
 
 
+1 ]=> (prime-check-loop 100)
+
+100 - not prime
+99 - not prime
+98 - not prime
+97 - prime
+96 - not prime
+95 - not prime
+94 - not prime
+93 - not prime
+92 - not prime
+91 - not prime
+90 - not prime
+89 - prime
+88 - not prime
+87 - not prime
+86 - not prime
+85 - not prime
+84 - not prime
+83 - prime
+82 - not prime
+81 - not prime
+80 - not prime
+79 - prime
+78 - not prime
+77 - not prime
+76 - not prime
+75 - not prime
+74 - not prime
+73 - prime
+72 - not prime
+71 - prime
+70 - not prime
+69 - not prime
+68 - not prime
+67 - prime
+66 - not prime
+65 - not prime
+64 - not prime
+63 - not prime
+62 - not prime
+61 - prime
+60 - not prime
+59 - prime
+58 - not prime
+57 - not prime
+56 - not prime
+55 - not prime
+54 - not prime
+53 - prime
+52 - not prime
+51 - not prime
+50 - not prime
+49 - not prime
+48 - not prime
+47 - prime
+46 - not prime
+45 - not prime
+44 - not prime
+43 - prime
+42 - not prime
+41 - prime
+40 - not prime
+39 - not prime
+38 - not prime
+37 - prime
+36 - not prime
+35 - not prime
+34 - not prime
+33 - not prime
+32 - not prime
+31 - prime
+30 - not prime
+29 - prime
+28 - not prime
+27 - not prime
+26 - not prime
+25 - not prime
+24 - not prime
+23 - prime
+22 - not prime
+21 - not prime
+20 - not prime
+19 - prime
+18 - not prime
+17 - prime
+16 - not prime
+15 - not prime
+14 - not prime
+13 - prime

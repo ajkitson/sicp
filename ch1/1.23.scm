@@ -23,8 +23,11 @@
 ; Why not 1/2 the time? Maybe because the time window doesn't just include trying to find a divisor but also
 ; the overhead of calculating timings, calling functions not related to the divisors, etc. There isn't a lot of this, 
 ; but notice that the percentages get smaller as the primes get larger and, correspondingly, calculating divisors will 
-; take up a greater portion of the process' time. I don't find this super convincing, but I'm OK not getting to the 
-; bottom of it.
+; take up a greater portion of the process' time. 
+; I don't find this super convincing. If I run them again, I sometimes get a value that's as low as half the previous values
+; These numbers might be small enough that it's hard to observe the changes. Small changes in rounding or cutoffs
+; could affect the results.
+; It's in the ballpark of what we expect and expecting something exact might be expecting too much.
 
 1 ]=> (search-for-primes 1000000000 1000000100)
 1000000007 *** .01999999999998181

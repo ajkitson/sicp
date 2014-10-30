@@ -20,9 +20,9 @@
 	(if (prime? n)
 		(report-prime (- (runtime) start-time))))
 
-(define (report-prime elapsed-prime)
+(define (report-prime elapsed-time)
 	(display " *** ")
-	(display elapsed-prime))
+	(display elapsed-time))
 
 ; Using this procedure, write a procedure search-for-prime that checks the primality of consecutive odd integers in
 ; a specified range. use your procedure to find the 3 smallest primes larger than 1000; larger than 10,000; larger 
@@ -36,10 +36,10 @@
 (define (search-for-primes start end)
 	(if (<= start end)
 		(cond ((even? start) 
-				(search-for-prime (+ start 1) end))
+				(search-for-primes (+ start 1) end))
 			(else 
 				(timed-prime-test start)
-				(search-for-prime (+ start 2) end)))
+				(search-for-primes (+ start 2) end)))
 		(display "done!")))
 
 ; Results on the 3 primes greater than 1000, 10k, and 1m are below. Not much to see here. Maybe computers got too fast
@@ -61,7 +61,7 @@
 ; We expect to see 10n to take sqrt(10) times as long as n, and we do! 
 ; Let's check out 100b to confirm. We expect thest to be in the mid 0.3s
 ; ...and that's about what we get!
-
+					  	    		  
 1 ]=> (search-for-primes 100000000000 1000000000100)
 100000000003 *** .38000000000000966
 100000000019 *** .37000000000000455
