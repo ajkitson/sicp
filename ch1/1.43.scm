@@ -8,7 +8,17 @@
 ;
 ; Hint: You may find it convenient to use compose from exercise 1.42
 ; ======
-; Compose does make it easier, though just a bit. 
+; I got this one wrong the first time around. I didn't define the internal iter procedure and instead called repeated recursively,
+; passing (compose f f) as the first argument:
+; (define (repeated f n)
+; 	(if (= n 1)
+; 		f
+; 		(repeated (compose f f) (- n 1))))
+;
+; This passes the test mentioned in the exercise but doesn't actually work. Instead of applying f n times, it applies it 2^(n -1)
+; times--we're essentially doubling it each time we call repeated recursively. 
+;
+; Here's the version that correctly applies f only n times:
 
 (define (compose f g) 
 	(lambda (x) (f (g x))))
@@ -16,10 +26,4 @@
 (define (repeated f n)
 	(if (= n 1)
 		f
-		(repeated (compose f f) (- n 1))))
-
-; Without compose
-(define (repeated f n)
-	(if (= n 1)
-		f
-		(repeated (lambda (x) (f (f x))) (- n 1))))
+		(compose f (repeated f (- n 1)))))
