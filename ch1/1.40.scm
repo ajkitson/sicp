@@ -16,6 +16,7 @@
 	(try first-guess))
 
 (define (newtons-method g guess)
+	(define dx 0.00001)
 	(define (deriv g)
 		(lambda (x)
 			(/ (- (g (+ x dx)) (g x)) 

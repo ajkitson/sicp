@@ -14,7 +14,7 @@
 			(lambda (y) (/ x (* y y))))
 		1.0))
 
-; Now let's do y^4
+; Now let's do y^4, using repeated on average-damp
 (define (fourth-root x)
 	(fixed-point 
 		((repeated average-damp 2)
@@ -24,7 +24,7 @@
 ; OK, now let's play around with nth roots and see how much average damping we need to do
 (define (nth-root x n)
 	(fixed-point 
-		((repeated average-damp 2)
+		((repeated average-damp 2) ; leaving hard-coded for now
 			(lambda (y) (/ x (expt y (- n 1))))) ; is expt considered a primitive? It comes for free in mit-scheme. I'm not going to worry about it
 		1.0))
 
