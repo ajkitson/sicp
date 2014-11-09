@@ -35,6 +35,7 @@
 ;
 ; I'm going to leave this for now. Reading ahead, it looks like we circle back to reconsider using intervals because algebra doesn't
 ; work predictably. Maybe this is one of the squirly things we get rid of later.
+; Plus, the number represented by the interval stays the same. The uncertainty just changes with each operation.
 
 (define (make-interval a b)
 	(cons a b))
