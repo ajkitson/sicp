@@ -47,8 +47,6 @@
 
 
 
-
-
 (define (mul-interval a b)
 	(let ((p1 (* (lower-bound a) (lower-bound b)))
 			(p2 (* (lower-bound a) (upper-bound b)))
