@@ -15,16 +15,14 @@
 ; ====
 ; Hmmm. Let's use this as an opportunity to make a generic filter function and then use that to define same-parity.
 (define (filter fn items)
-	(define (iter source result)
-		(if (null? source)
-			result
-			(iter 
-				(cdr source) 
-				(if (fn (car source))
-					(cons (car source) result)
-					result))))
-	(reverse (iter items (list)))) ; use reverse so we preserve original order (if I try to switch (car source) and result above, we get nested lists)
-
+	(if (null? items)
+		(list)
+		(let ((pass (fn (car items))))
+			 (if (not pass)
+			 	(filter fn (cdr items))
+			 	(cons
+			 		(car items)
+			 		(filter fn (cdr items)))))))
 
 (define (same-parity . nums)
 	(filter 
@@ -35,7 +33,6 @@
 		nums))
 
 ; here it is in action:
-
 1 ]=> (same-parity 51 60 32 2 3 4 5 87 92)
 ;Value 13: (51 3 5 87)
 
@@ -43,12 +40,3 @@
 ;Value 14: (50 60 32 2 4 92)
 
 
-; and here's a recursive procedure for filter, just for good measure
-(define (filter fn items)
-	(cond 
-		((null? items) (list))
-		((fn (car items)) 
-			(cons 
-				(car items) 
-				(filter fn (cdr items))))
-		(else (filter fn (cdr items)))))
