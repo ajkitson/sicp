@@ -23,3 +23,4 @@
 				(square x)
 				(square-list x))) 
 		tree))
+
