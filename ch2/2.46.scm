@@ -32,7 +32,7 @@
 (define (sub-vect a b)
 	(combine-vect - a b))
 
-; these also work. seems like a tossup on style to me.
+; these also work. I like them a little better
 (define (combine-vect op)
 	(lambda (a b)
 		(make-vect

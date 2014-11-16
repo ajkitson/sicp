@@ -25,4 +25,5 @@
 				
 ; and now with beside and rotation operations:
 (define (below p-bottom p-top)
-	(rotate270 (beside (rotate90 p-top) (rotate90 p-bottom))))
+	(rotate270 
+		(beside (rotate90 p-top) (rotate90 p-bottom))))
