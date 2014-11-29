@@ -49,33 +49,3 @@
 ;Value 2: (* 2 x)
 1 ]=> (deriv '(* 5 (** x 3)) 'x)
 ;Value 8: (* 5 (* 3 (** x 2)))
-
-
-
-(define (variable? x)
-	(symbol? x))
-(define (same-variable? v1 v2)
-	(and (variable? v1) (variable? v2) (eq? v1 v2)))
-(define (=number? x y) (and (number? x) (number? y) (= x y)))
-
-(define (make-sum a b) 
-  (cond ((=number? a 0) b)
-        ((=number? b 0) a)
-        ((and (number? a) (number? b)) (+ a b))
-        (else (list '+ a b))))
-
-(define (make-product a b)
-  (cond ((or (=number? a 0) (=number? b 0)) 0)
-        ((=number? a 1) b)
-        ((=number? b 1) a)
-	(else (list '* a b))))
-
-(define (sum? x)
-	(and (pair? x) (eq? (car x) '+)))
-(define (addend a) (cadr a))
-(define (augend a) (caddr a))
-
-(define (product? x)
-	(and (pair? x) (eq? (car x) '*)))
-(define (multiplier x) (cadr x))
-(define (multiplicand x) (caddr x))

@@ -32,8 +32,8 @@ psi^n/sqrt(5) < .5, or psi^n < sqrt(5) / 2
 
 Now let's prove this inductively. 
 Base cases:
-n = 0:  1/sqrt(5) < .5, true
-n = 1: abs(psi) / sqrt(5) < .5
+n = 0:  1/sqrt(5) < .5, true	; psi^0 -> 1
+n = 1: abs(psi) / sqrt(5) < .5 	; psi^1 -> psi
 		~0.618 / sqrt(5) < .5
 		~0.276 < .5
 
@@ -78,7 +78,7 @@ We must therefore show that:
 ; (1 + sqrt(5) / 2) * (1 + sqrt(5) / 2) factors to 6 + 2(sqrt(5)) / 4, or (3 + sqrt(5)) / 2 or 1 + (1 + sqrt(5) / 2)
 ; You can do the same for psi on your own.
 ;
-; Alright, now let's use this fact. Since we have phi^n-2 as part of our response, let's factor phi^2 our of phi^n 
+; Alright, now let's use this fact. Since we have phi^n-2 as part of what we're trying to prove, let's factor phi^2 our of phi^n 
 ; and see where that gets us
 (phi^n - psi^n) / sqrt(5) = phi^2(phi^(n - 2)) - psi^2(psi^(n - 2)) / sqrt(5) 			(factoring our phi^2 and psi^2)
 						  = (1 + phi)(phi^(n - 2)) - (1 + psi)(psi^(n - 2))	/ sqrt(5)	(using the fact that phi^2 = 1 + phi)
