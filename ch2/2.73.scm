@@ -1,6 +1,5 @@
 ; Section 2.3.2 described a program that performs symbolic differentiation:
 
-
 ; (define (deriv exp var)
 ; 	(cond 
 ; 		((number? exp) 0)
