@@ -12,19 +12,15 @@
 (define (install-zero-package)
 	(define (zero? x) (= x 0))
 	(define (numer x) (car x))
-	(define (real-part x)
-		(apply-generic 'real-part x))
-	(define (imag-part x)
-		(apply-generic 'imag-part x))
+	(define (magnitude x)
+		(apply-generic 'magnitude x))
 
 
 	(put '=zero? '(scheme-number) zero?)
 	(put '=zero? '(rational)
 		(lambda (x) (zero? (numer x))))
 	(put '=zero? '(complex)
-		(lambda (x) 
-			(and (zero? (real-part x))
-				(zero? (imag-part x)))))
+		(lambda (x) (zero? (magnitude x))))
 	'done)
 
 1 ]=> (=zero? 1)

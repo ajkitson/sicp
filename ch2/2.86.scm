@@ -3,81 +3,149 @@
 ; to accomodate this. You will have to define operations such as sine and cosine that are generic over ordinary numbers and
 ; rational numbers.
 ; =====
-; My first reaction was that this would be really hard, but it actually probably won't be. We'll start with our complex number 
-; package from 2.5.1 and convert the native arithmetic operators to use the general arithmetic operators we defined in 2.5.1.
-; That takes care of almost all the problem. From there, the only challenge is defining sine and cosine, etc. that aren't yet
-; part of our general arithmetic package. We'll also have to update the rectangular and polar packages to use the generic 
-; operators.
+; This is mostly a matter of replacing the scheme arithmetic operators with our generic ones. The trick is in how thorough-going
+; we need to be. At first I thought that we could just update the complex package and that'd be enough. It is for add and sub when
+; using a rectangular represenation and the rational number is really just an integer represented as a rational:
 
-; First we update the packages to use general arithmetic operations. I'm just including the changed parts
+1 ]=> (add (make-complex-from-real-imag 6 0) (make-complex-from-real-imag (make-rational 10 2) 3))
+;Value 40: (complex rectangular 11 . 3)
 
-; Update the complex package:
-(define (install-complex-package)
-	;... ommitting stuff that hasn't changed
+1 ]=> (sub (make-complex-from-real-imag 6 0) (make-complex-from-real-imag (make-rational 10 2) 3))
+;Value 41: (complex rectangular 1 . -3)
 
-	; internal procedures -- UPDATE to use general arithmetic operations
-	(define (add-complex z1 z2)
-		(make-from-real-imag
-			(add (real-part z1) (real-part z2))
-			(add (imag-part z1) (imag-part z2))))
-	(define (sub-complex z1 z2)
-		(make-from-real-imag
-			(sub (real-part z1) (real-part z2))
-			(sub (imag-part z1) (imag-part z2))))
-	(define (mul-complex z1 z2)
-		(make-from-mag-ang
-			(mul (magnitude z1) (magnitude z2))
-			(add (angle z1) (angle z2))))
-	(define (div-complex z1 z2)
-		(make-from-mag-ang
-			(/ (magnitude z1) (magnitude z2))
-			(- (angle z1) (angle z2))))
+; Or if we multiply and divide using the polar representation:
+1 ]=> (div (make-complex-from-mag-ang 6 0) (make-complex-from-mag-ang (make-rational 10 2) 3))
+;Value 44: (complex polar 6/5 . -3)
 
-	; interface to rest of system
-	;....this part hasn't changed, so ommitting
+1 ]=> (mul (make-complex-from-mag-ang 6 0) (make-complex-from-mag-ang (make-rational 10 2) 3))
+;Value 45: (complex polar 30 . 3)
 
- 'done)
+; Anything else results in an error when we convert between representations. OK, I should have expected that. That's why they told
+; me I'd have to implement sine and cosine, etc. Still, it's good to see that, once we get the representation right, it works as 
+; expected	
+;
+; Let's implement those other procedures. Which do we need? These are the operations we haven't yet defined generically that are used
+; to convert between the different representations of complex numbers: sqrt, atan, cos, sin. For scheme numbers, we can just
+; use the built-ins. 
+; 
+; The trig functions on rational numbers poses a problem because we might get a result that can't be expressed as a rational number.
+; Not just might: almost certainly will. So, how do express the result? We could try to hang onto the rational number representation 
+; and make the sin of a rational number the sin(numer)/sin(denom), but this seems wrong. Why hold onto the rational number if the 
+; parts aren't integers? So for now, we'll not stick to returning rational numbers for these. Same for sqrt. So really, the rational 
+; number procedures will mostly just pass (/ (numer n) (denom n)) to the standard functions.
+;
+; Here's the updated parts of the scheme-number and rational packages. I got sick of writing the (lambda...) for deferring to the
+; package's internal funcitn so wrote a wrapper for the rational package
 
-; Update polar package (just the updated parts):
-(define (install-polar-package)
+;; Scheme-Number
+(define (install-scheme-number-package)
+  ;; ... other arithmetic operators ...
 
-	; these are update to use general arithmetic package
-	(define (real-part z) 
-		(mul (magnitude z) (cos-gen (angle z))))
-	(define (imag-part z)
-		(mul (magnitude z) (sin-gen (angle z))))
+  ; simply defer to built-ins
+  (put 'sqrt '(scheme-number) sqrt)
+  (put 'sin '(scheme-number) sin)
+  (put 'cos '(scheme-number) cos)
+  (put 'atan '(scheme-number scheme-number) atan)
 
-	; rest is the same
+  ; .... other stuff
+  'done)
 
-	'done)
+;; Rational Number
+(define (install-rational-package)
+  ; .... other arith ops
 
-; Update rectangular package (including just updated parts)
-(define (install-rectangular-package)
-	(define (magnitude z)
-		(sqrt-gen 
-			(add (square-gen (real-part z))
-				(square-gen (imag-part z)))))
-	(define (angle z)
-		(atan-gen (imag-part z) (real-part z)))
+  (define (to-real n) ; convert to a real number
+    (/ (numer n) (denom n)))
 
-	;rest is the same
+  (define (real-fn f) ; wrapper to pass rational n to given fn as a real num
+    (lambda (n) (f (to-real n))))
 
-	'done)
+  (put 'sqrt '(rational) (real-fn sqrt))
+  (put 'sin '(rational) (real-fn sin))
+  (put 'cos '(rational) (real-fn cos))
+  (put 'atan '(rational rational) 
+  	(lambda (n m) (atan (to-real n) (to-real m))))
 
-; Now we had to switch a handful of native arithmetic operations to something more general. We need to define these in a way
-; that will work for all types of numbers. Some of these (e.g. square) decompose nicely to existing general arithmetic operations
-; Others don't. I'm going to just do some handwaving instead of actually defining these. We'll get the framework in place, though.
+  ; .... ohter stuff
+  'done)
 
-(define (square-gen x) (mul x x))
-(define (sqrt-gen x) (apply-generic 'sqrt-gen x))
-(define (cos-gen a) (apply-generic 'cos-gen a))
-(define (atan-gen a) (apply-generic 'atan-gen a))
-(define (sin-gen a) (apply-generic 'sin-gen a))
 
-; Now these just need to be defined for each of the number types
+; Then we define the general functions:
+(define (sin-gen n) (apply-generic 'sin n))
+(define (cos-gen n) (apply-generic 'cos n))
+(define (atan-gen n m) (apply-generic 'atan n m)) ; forgot this takes two args the first time
+(define (sqrt-gen n) (apply-generic 'sqrt n))
 
-(define (install-rational-trig)
-	(put 'cos-gen '(rational) 
-		(lambda (a) (... code to perform cos on rational number)))
-	... etc
-	)
+; When I first tried it from here, I was getting this error:
+; 3 error> (add n m)
+;The object .8414709848078965, passed as an argument to gcd, is not an integer.
+
+; This uncovered an issue with the coercion from scheme-number->rational in that it assumed the scheme number was an int... which
+; we want it to be in making a rational number. But it wasn't always true. For now, I'm just rounding the scheme-number in the
+; coercion. Could get fancier here and if the number is a rational decimal try to convert to a fraction, but that's for another day.
+
+; Corrected this and finally it works!
+
+; We'll see what we get first with a complex number defined with ints:
+1 ]=> (define a (make-complex-from-real-imag 5 2))
+1 ]=> (add a a)
+;Value 98: (complex rectangular 10 . 4)
+1 ]=> (sub a a)
+;Value: 0
+1 ]=> (mul a a)
+;Value 99: (complex polar 28.999999999999996 . .7610127542247298)
+1 ]=> (div a a)
+;Value: 1.
+
+; And just to make sure everything works a * a / a + a - a = a
+1 ]=> (sub (add a (div (mul a a) a)) a)  
+;Value 102: (complex rectangular 5. . 2.)
+
+; OK, now here are the same manipulations but with the real and imaginary parts defined as rational numbers:
+1 ]=> (define a (make-complex-from-real-imag (make-rational 15 3) (make-rational 4 2)))
+
+; Here's a to show that we don't convert to scheme-nums on creating the complex number:
+1 ]=> a
+;Value 106: (complex rectangular (rational 5 1) rational 2 1)
+
+
+1 ]=> (add a a)
+;Value 103: (complex rectangular 10 . 4)
+1 ]=> (sub a a)
+;Value: 0
+1 ]=> (mul a a)
+;Value 104: (complex polar 28.999999999999996 . .7610127542247298)
+1 ]=> (div a a)
+;Value: 1.
+1 ]=> (sub (add a (div (mul a a) a)) a)
+;Value 105: (complex rectangular 5. . 2.)
+
+
+; So for real/image representation we get the same values whehter we use reational or scheme numbers to build it
+; Now let's confirm the mag/ang representation, first with ints:
+
+1 ]=> (define b (make-complex-from-mag-ang 5 2))
+1 ]=> (add b b)
+;Value 108: (complex rectangular -4.161468365471424 . 9.092974268256818)
+1 ]=> (sub b b)
+;Value: 0.
+1 ]=> (mul b b)
+;Value 109: (complex polar 25 . 4)
+1 ]=> (div b b)
+;Value: 1
+1 ]=> (div (mul (sub (add b b) b) b) b)
+;Value 114: (complex polar 5. . 2.)
+
+; Now with rationals in place of the ints (equivalent value, though). Some of these are not the exact value because we lose precistion
+; each time we convert between scheme nums and rational nums.
+1 ]=> (add b b)
+;Value 159: (complex rectangular -4.161 . 9.093)
+1 ]=> (sub b b)
+;Value: 0.
+1 ]=> (mul b b)
+;Value 160: (complex polar 25 . 4)
+1 ]=> (div b b)
+;Value: 1
+1 ]=> (div (mul (sub (add b b) b) b) b)
+;Value 161: (complex polar 4.999914249264681 . 1.9999563400810616)
+

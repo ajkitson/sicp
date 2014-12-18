@@ -28,7 +28,7 @@
 ; c. Modify apply-generic so that it doesn't try coercion if the two arguments have the same type.
 ; =======
 ; a. This is a weird one. I'm not sure why we're entertaining Louis with this. We only try to coerce arguments of the same type if
-; 	we failed to find a procedure for that operator and argument type combo already. This doesn't change if few coerce the 
+; 	we failed to find a procedure for that operator and argument type combo already. This doesn't change if we coerce the 
 ; 	arguments to their existing type. In fact, it introduces an infinite loop. When we find the coercion, we'll call apply-generic
 ; 	again with the coerced types. But under Louis' scheme, the types don't actually change, so we again fail to find a procedure, 
 ; 	just as we did the first time, but we do find a coercion, so we call apply-generic again with the coerced types, which are 
@@ -44,26 +44,38 @@
 ; 	there:
 
 (define (apply-generic op . args)
-	(define (lookup-error op tags)
-		(error "No method for these types" (list op tags)))
-	(let ((type-tags (map type-tag args)))
-		(let ((proc (get op type-tags)))
-			(if proc
-				(apply proc (map contents args))
-				(if (and (= (length args) 2) 
-						(not (eq? (car type-tags) (cadr type-tags))))  ; ADDED to prevent attempted coercion on same type
-					(let ((type1 (car type-tags))
-							(type2 (cadr type-tags))
-							(a1 (car args))
-							(a2 (cadr args)))
-						(let ((t1->t2 (get-coercion type1 type2))
-							(t2->t1 (get-coercion type2 type1)))
-							(cond
-								(t1->t2 (apply-generic (t1->t2 a1) a2))
-								(t2->t1 (apply-generic a1 (t2->t1 a2)))
-								(else (lookup-error op type-tags)))))
-					(lookup-error op type-tags))))))
+  (define (lookup-error op tags)
+    (error "No method for these types" (list op tags)))
+  (let ((type-tags (map type-tag args)))
+    (let ((proc (get op type-tags)))
+      (if proc
+        (apply proc (map contents args)) 
+        (if (and (= (length args) 2) 
+            (not (eq? (car type-tags) (cadr type-tags))))  ; ADDED to prevent attempted coercion on same type
+          (let 
+            ((type1 (car type-tags))
+              (type2 (cadr type-tags))
+              (a1 (car args))
+              (a2 (cadr args)))
+            (let 
+              ((t1->t2 (get-coercion type1 type2))
+              (t2->t1 (get-coercion type2 type1)))
+              (cond
+                (t1->t2 (apply-generic op (t1->t2 a1) a2))
+                (t2->t1 (apply-generic op a1 (t2->t1 a2)))
+                (else (lookup-error op type-tags)))))
+          (lookup-error op type-tags))))))
 
 
 
+1 ]=> (add 3 4)
+;Value: 7
 
+1 ]=> (add 3 (make-rational 4 7))
+;Value 34: (rational 25 7)
+
+1 ]=> (add (make-rational 4 7) (make-complex-from-real-imag 5 10))
+;Value 35: (complex rectangular (rational 39 7) . 10)
+
+1 ]=> (add (make-rational 4 7) (make-rational 3 14))
+;Value 36: (rational 11 14)
