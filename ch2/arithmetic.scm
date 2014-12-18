@@ -64,6 +64,11 @@
 (define (atan-gen n m) (apply-generic 'atan n m))
 (define (sqrt-gen n) (apply-generic 'sqrt n))
 
+;; Predicates -- actual code added to the packages above so they can use selectors, etc.
+(define (equ? x y) (apply-generic 'equ? 'no-drop x y))
+(define (=zero? x) (apply-generic '=zero? 'no-drop x))
+
+
 ;; Scheme-Number
 (define (install-scheme-number-package)
   (define (tag x) 
@@ -279,9 +284,120 @@
 (define (make-complex-from-mag-ang r a)
   ((get 'make-from-mag-ang 'complex) r a))
 
-;; Predicates -- actual code added to the packages above so they can use selectors, etc.
-(define (equ? x y) (apply-generic 'equ? 'no-drop x y))
-(define (=zero? x) (apply-generic '=zero? 'no-drop x))
+
+;; Polynomials!
+; (define (install-poly-dense)
+;   'done)
+
+; (install-poly-dense)
+; (define (make-poly-dense var terms)
+;   ((get 'make 'poly-dense) var terms))
+
+; (define (install-poly-sparse)
+;   'done)
+
+; (define (make-poly-sparse var terms)
+;   ((get 'make 'poly-sparse) var terms))
+
+
+(define (install-poly-math-package)
+  (define (make-poly var term-list)
+      (cons var term-list))
+  (define (variable p)
+      (car p))
+  (define (term-list p)
+      (cdr p)) ; do I need to change this to cadr when I separate poly types?
+  (define (add-poly p1 p2)
+    (if (same-variable? (variable p1) (variable p2))
+        (make-poly
+            (variable p1)
+            (add-terms (term-list p1) (term-list p2)))
+        (error "Polys not in same var -- ADD POLY" (list p1 p2))))
+
+  (define (mul-poly p1 p2)
+    (if (same-variable? (variable p1) (variable p2))
+        (make-poly
+            (variable p1)
+            (mul-terms (term-list p1) (term-list p2)))
+        (error "Polys not in same var -- MUL POLY" (list p1 p2))))
+  
+
+  (define (negate-poly p)
+    (mul-poly p ; multiply p by -1 in poly form (-1x^0 )
+      (make-poly (variable p) (list (make-term 0 -1)))))
+
+  (define (sub-poly a b)
+    (add-poly a (negate-poly b)))
+
+
+  ;terms
+  (define (make-term order coeff) (list order coeff))
+  (define (order term) (car term))
+  (define (coeff term) (cadr term))
+  (define (first-term term-list) (car term-list))
+  (define (rest-terms term-list) (cdr term-list))
+  (define (adjoin-term term term-list)
+    (if (=zero? (coeff term))
+      term-list
+      (cons term term-list)))
+
+  (define (the-empty-termlist) '())
+  (define (empty-termlist? term-list)
+    (null? term-list))
+
+  (define (add-terms L1 L2)
+    (cond 
+      ((empty-termlist? L1) L2)
+      ((empty-termlist? L2) L1)
+      (else 
+        (let ((t1 (first-term L1))
+              (t2 (first-term L2)))
+          (cond 
+            ((> (order t1) (order t2))
+              (adjoin-term t1 (add-terms (rest-terms L1) L2)))
+            ((< (order t1) (order t2))
+              (adjoin-term t2 (add-terms L1 (rest-terms L2))))
+            (else 
+              (adjoin-term
+                (make-term 
+                  (order t1) 
+                  (add (coeff t1) (coeff t2)))
+                (add-terms (rest-terms L1) (rest-terms L2)))))))))
+
+  (define (mul-terms L1 L2)
+    (if (empty-termlist? L1) 
+        (the-empty-termlist)
+        (add-terms
+            (mul-term-by-all-terms (first-term L1) L2)
+            (mul-terms (rest-terms L1) L2))))
+
+  (define (mul-term-by-all-terms t L)
+    (if (empty-termlist? L)
+        (the-empty-termlist)
+        (let ((next-term (first-term L)))
+            (adjoin-term
+                (make-term
+                  (add (order t) (order next-term))
+                  (mul (coeff t) (coeff next-term)))
+                (mul-term-by-all-terms t (rest-terms L))))))
+
+  (define (tag x) (attach-tag 'polynomial x))
+  (put 'add '(polynomial polynomial)
+      (lambda (x y) (tag (add-poly x y))))
+  (put 'sub '(polynomial polynomial)
+      (lambda (x y) (tag (sub-poly x y))))
+  (put 'mul '(polynomial polynomial)
+      (lambda (x y) (tag (mul-poly x y))))
+  (put 'make 'polynomial
+      (lambda (var terms) (tag (make-poly var terms))))
+  (put '=zero? '(polynomial) empty-termlist?) 
+    'done)
+
+(install-poly-math-package)
+
+(define (make-poly var terms)
+  ((get 'make 'polynomial) var terms))
+
 
 
 ;; COERCION!
