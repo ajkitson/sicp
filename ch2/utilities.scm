@@ -1,3 +1,15 @@
+(define (every test elements)
+	(cond
+		((null? elements) true)
+		((test (car elements)) (every test (cdr elements)))
+		(else false)))
+
+(define (some test elements)
+	(cond 
+		((null? elements) false)
+		((test (car elements)) (car elements))
+		(else (some test (cdr elements)))))
+
 (define (subsets s)
 	(if (null? s)
 		(list (list)) ; empty list... just (list) is ignored

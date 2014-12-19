@@ -286,64 +286,78 @@
 
 
 ;; Polynomials!
-; (define (install-poly-dense)
-;   'done)
-
-; (install-poly-dense)
-; (define (make-poly-dense var terms)
-;   ((get 'make 'poly-dense) var terms))
-
-; (define (install-poly-sparse)
-;   'done)
-
-; (define (make-poly-sparse var terms)
-;   ((get 'make 'poly-sparse) var terms))
-
-
 (define (install-poly-math-package)
-  (define (make-poly var term-list)
-      (cons var term-list))
-  (define (variable p)
-      (car p))
-  (define (term-list p)
-      (cdr p)) ; do I need to change this to cadr when I separate poly types?
-  (define (add-poly p1 p2)
-    (if (same-variable? (variable p1) (variable p2))
-        (make-poly
-            (variable p1)
-            (add-terms (term-list p1) (term-list p2)))
-        (error "Polys not in same var -- ADD POLY" (list p1 p2))))
 
-  (define (mul-poly p1 p2)
-    (if (same-variable? (variable p1) (variable p2))
-        (make-poly
-            (variable p1)
-            (mul-terms (term-list p1) (term-list p2)))
-        (error "Polys not in same var -- MUL POLY" (list p1 p2))))
-  
+  ;; TERM-LIST PROCEDURES
 
-  (define (negate-poly p)
-    (mul-poly p ; multiply p by -1 in poly form (-1x^0 )
-      (make-poly (variable p) (list (make-term 0 -1)))))
+  ;; Sparse term-list package
+  (define (install-sparse-package)
+    ; definitions internal to sparse package
+    (define (first-term term-list)
+      (make-term 
+        (length (cdr term-list)) ; order = dist to end of term-list
+        (car term-list)))   
+   (define (rest-terms term-list)
+    (cond
+      ((null? (cdr term-list)) (the-empty-termlist))
+      ((= (cadr term-list) 0) (rest-terms (cdr term-list)))  ; if next elem after first = 0, skip and return rest of term-list
+      (else (cdr term-list))))
 
-  (define (sub-poly a b)
-    (add-poly a (negate-poly b)))
+   (define (adjoin-term term term-list)
+      (cond 
+        ((=zero? (coeff term)) term-list)
+        ((= (order term) (length term-list))
+          (cons (coeff term) term-list))
+        ((> (order term) (length term-list)) 
+          (adjoin-term term (cons 0 term-list)))
+        (else (error "Adjoining term less than highest term in list -- SPARSE ADJOIN TERM" 
+              (list term term-list)))))
 
+    ; hook up to rest of system
+    (define (tag x) (attach-tag 'sparse x))
+    (put 'first-term '(sparse) first-term)
+    (put 'rest-terms '(sparse) 
+        (lambda (x) (tag (rest-terms x))))
+    (put 'adjoin-term '(term sparse)  ; term is dummy tag to indicate first arg is a term (which doesn't have a type)
+        (lambda (term term-list) (tag (adjoin-term term term-list))))
+    'done)
+  (install-sparse-package)
 
-  ;terms
+  ;; dense term-list package
+  (define (install-dense-package)
+    (define (first-term term-list) (car term-list))
+    (define (rest-terms term-list) 
+      (cdr term-list))
+    (define (adjoin-term term term-list)
+      (if (=zero? (coeff term))
+        term-list
+        (cons term term-list)))
+
+    (define (tag x) (attach-tag 'dense x))
+    (put 'first-term '(dense) first-term)
+    (put 'rest-terms '(dense) 
+        (lambda (x) (tag (rest-terms x))))
+    (put 'adjoin-term '(term dense)
+        (lambda (term term-list) (tag (adjoin-term term term-list))))
+    'done)
+  (install-dense-package)
+
+  ; define procedures so they work with either term-list type
+  (define (first-term term-list)
+      (apply-generic 'first-term term-list))
+  (define (rest-terms term-list)
+      (apply-generic 'rest-terms term-list))
+  (define (adjoin-term term term-list) ; can't use apply-generic since term isn't typed
+      ((get 'adjoin-term (list 'term (type-tag term-list))) term (contents term-list)))
+
+  ;term procedures
   (define (make-term order coeff) (list order coeff))
   (define (order term) (car term))
   (define (coeff term) (cadr term))
-  (define (first-term term-list) (car term-list))
-  (define (rest-terms term-list) (cdr term-list))
-  (define (adjoin-term term term-list)
-    (if (=zero? (coeff term))
-      term-list
-      (cons term term-list)))
 
   (define (the-empty-termlist) '())
   (define (empty-termlist? term-list)
-    (null? term-list))
+    (null? (contents term-list))) ; no need to do this different per list-type
 
   (define (add-terms L1 L2)
     (cond 
@@ -366,20 +380,55 @@
 
   (define (mul-terms L1 L2)
     (if (empty-termlist? L1) 
-        (the-empty-termlist)
+        L1      ; return L1 so we retain type-tag
         (add-terms
             (mul-term-by-all-terms (first-term L1) L2)
             (mul-terms (rest-terms L1) L2))))
 
   (define (mul-term-by-all-terms t L)
     (if (empty-termlist? L)
-        (the-empty-termlist)
+        L     ; return L so we retain type-tag
         (let ((next-term (first-term L)))
             (adjoin-term
                 (make-term
                   (add (order t) (order next-term))
                   (mul (coeff t) (coeff next-term)))
                 (mul-term-by-all-terms t (rest-terms L))))))
+
+  ;; Polynomial procedures
+  ;; Basic constructors, selectors
+  (define (make-poly var term-list)
+    (cons var term-list))
+      ; (cons var (attach-tag 'dense term-list)))
+  ; (define (make-poly-sparse var term-list)
+  ;     (cons var (attach-tag 'sparse term-list)))
+  (define (variable p)
+      (car p))
+  (define (term-list p)
+      (cdr p)) ; do I need to change this to cadr when I separate poly types?
+
+  ;; Polynomial arithmetic
+  (define (add-poly p1 p2)
+    (if (same-variable? (variable p1) (variable p2))
+        (make-poly
+            (variable p1)
+            (add-terms (term-list p1) (term-list p2)))
+        (error "Polys not in same var -- ADD POLY" (list p1 p2))))
+
+  (define (mul-poly p1 p2)
+    (if (same-variable? (variable p1) (variable p2))
+        (make-poly
+            (variable p1)
+            (mul-terms (term-list p1) (term-list p2)))
+        (error "Polys not in same var -- MUL POLY" (list p1 p2))))
+  
+  (define (negate-poly p)
+    (mul-poly p ; multiply p by -1 in poly form (-1x^0 )
+      (make-poly (variable p) (list (make-term 0 -1)))))
+
+  (define (sub-poly a b)
+    (add-poly a (negate-poly b)))
+
 
   (define (tag x) (attach-tag 'polynomial x))
   (put 'add '(polynomial polynomial)
@@ -388,16 +437,23 @@
       (lambda (x y) (tag (sub-poly x y))))
   (put 'mul '(polynomial polynomial)
       (lambda (x y) (tag (mul-poly x y))))
-  (put 'make 'polynomial
-      (lambda (var terms) (tag (make-poly var terms))))
+  (put 'make-dense 'polynomial
+      (lambda (var terms) 
+        (tag (make-poly var 
+                        (attach-tag 'dense terms)))))
+  (put 'make-sparse 'polynomial
+      (lambda (var terms) 
+        (tag (make-poly var 
+                        (attach-tag 'sparse terms)))))
   (put '=zero? '(polynomial) empty-termlist?) 
     'done)
 
 (install-poly-math-package)
 
-(define (make-poly var terms)
-  ((get 'make 'polynomial) var terms))
-
+(define (make-polynomial var terms)
+  ((get 'make-dense 'polynomial) var terms))
+(define (make-polynomial-sparse var terms)
+  ((get 'make-sparse 'polynomial) var terms))
 
 
 ;; COERCION!
