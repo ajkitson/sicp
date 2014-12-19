@@ -399,6 +399,8 @@
   ;; Basic constructors, selectors
   (define (make-poly var term-list)
     (cons var term-list))
+  (define (make-dense-termlist terms)
+    (attach-tag 'dense terms))
       ; (cons var (attach-tag 'dense term-list)))
   ; (define (make-poly-sparse var term-list)
   ;     (cons var (attach-tag 'sparse term-list)))
@@ -424,7 +426,7 @@
   
   (define (negate-poly p)
     (mul-poly p ; multiply p by -1 in poly form (-1x^0 )
-      (make-poly (variable p) (list (make-term 0 -1)))))
+      (make-poly (variable p) (make-dense-termlist (list (make-term 0 -1))))))  ; need to create new tagged list -- make poly doesn't do this automatically
 
   (define (sub-poly a b)
     (add-poly a (negate-poly b)))
