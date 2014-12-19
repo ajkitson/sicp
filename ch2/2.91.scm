@@ -17,6 +17,7 @@
 ; Complete the following definition of div-terms by filling in the missing expressions. Use this to implement div-poly, which
 ; takes two polys as arguments and returns a list of the quotient and remainder polys.
 ; ========
+; 
 
 (define (div-poly p1 p2)
 	(if (same-variable? (variable p1) (variable p2))
@@ -31,17 +32,24 @@
 		(let ((n (first-term numer-terms))
 			  (d (first-term denom-terms)))
 			(if (> (order d) (order n)) ; base case -> dividend greater than divisor, so divisor becomes remainder, quotient is zero
-				(list (attach-tag 'dense (the-empty-termlist)) numer-terms) ;TODO: update empty-term-list to attach its own tag
-				(let 
-					((new-o (sub (order n) (order d)))
-					(new-c (div (coeff t1) (coeff t2))))
+				(list (the-empty-termlist) numer-terms) ;TODO: update empty-term-list to attach its own tag
+				(let ((new-o (sub (order n) (order d)))
+					  (new-c (div (coeff n) (coeff d))))
 					(let ((rest-of-result 
-								(sub L1		; new dividend = L1 - (new term * L2) 
-									(mul-terms 
-										(make-termlist-dense (list (make-term new-o new-c))) ; create new list so multerms knows how to handle it
-										L2)) 
-								L2))
+								(div-terms 
+									(sub-terms 
+										numer-terms 
+										(mul-term-by-all-terms (make-term new-o new-c) denom-terms))  ; new dividend = (current dividend - newest term * divisor)
+									denom-terms)))
 						(list 
 							(adjoin-term (make-term new-o new-c) (car rest-of-result)) ; add first term to quotient
 							(cadr rest-of-result)) ; remainder stays the same
 						))))))
+
+
+; And lo! It works:
+1 ]=> (define d (make-polynomial 'x '((5 1) (0 -1))))
+1 ]=> (define e (make-polynomial 'x '((2 1) (0 -1))))
+1 ]=> (div d e)
+;Value 274: (polynomial x (dense (3 1) (1 1)) (dense (1 1) (0 -1)))
+
