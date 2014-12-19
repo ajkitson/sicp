@@ -299,7 +299,7 @@
         (car term-list)))   
    (define (rest-terms term-list)
     (cond
-      ((null? (cdr term-list)) (the-empty-termlist))
+      ((null? (cdr term-list)) '())
       ((= (cadr term-list) 0) (rest-terms (cdr term-list)))  ; if next elem after first = 0, skip and return rest of term-list
       (else (cdr term-list))))
 
@@ -355,7 +355,7 @@
   (define (order term) (car term))
   (define (coeff term) (cadr term))
 
-  (define (the-empty-termlist) '())
+  (define (the-empty-termlist) '(dense))
   (define (empty-termlist? term-list)
     (null? (contents term-list))) ; no need to do this different per list-type
 
@@ -380,14 +380,14 @@
 
   (define (mul-terms L1 L2)
     (if (empty-termlist? L1) 
-        L1      ; return L1 so we retain type-tag
+        (the-empty-termlist)
         (add-terms
             (mul-term-by-all-terms (first-term L1) L2)
             (mul-terms (rest-terms L1) L2))))
 
   (define (mul-term-by-all-terms t L)
     (if (empty-termlist? L)
-        L     ; return L so we retain type-tag
+        (the-empty-termlist) 
         (let ((next-term (first-term L)))
             (adjoin-term
                 (make-term
