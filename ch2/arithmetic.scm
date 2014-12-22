@@ -1,3 +1,5 @@
+(load "utilities.scm")
+
 ;; ===========
 ;; Operation Table procedures (pulled from SO)
 (define global-array '())
@@ -202,7 +204,7 @@
   (define (angle z) (cdr z))
   (define (make-from-mag-ang r a) (cons r a))
   (define (real-part z)
-    (mul (magnitude z) (cos-gen (angle z)))) ;ISSUE MUST BE HERE, WITH HOW WE HANDLE RATIONALS....
+    (mul (magnitude z) (cos-gen (angle z)))) 
   (define (imag-part z)
     (mul (magnitude z) (sin-gen (angle z))))
   (define (make-from-real-imag x y)
@@ -344,9 +346,9 @@
 
   ; define procedures so they work with either term-list type
   (define (first-term term-list)
-      (apply-generic 'first-term term-list))
+      (apply-generic 'first-term 'no-drop term-list))
   (define (rest-terms term-list)
-      (apply-generic 'rest-terms term-list))
+      (apply-generic 'rest-terms 'no-drop term-list))
   (define (adjoin-term term term-list) ; can't use apply-generic since term isn't typed
       ((get 'adjoin-term (list 'term (type-tag term-list))) term (contents term-list)))
 
@@ -437,46 +439,74 @@
 
   ;; Polynomial arithmetic
   (define (add-poly p1 p2)
-    (if (same-variable? (variable p1) (variable p2))
-        (make-poly
-            (variable p1)
-            (add-terms (term-list p1) (term-list p2)))
-        (error "Polys not in same var -- ADD POLY" (list p1 p2))))
+    (make-poly
+        (variable p1)
+        (add-terms (term-list p1) (term-list p2))))
 
   (define (mul-poly p1 p2)
-    (if (same-variable? (variable p1) (variable p2))
-        (make-poly
-            (variable p1)
-            (mul-terms (term-list p1) (term-list p2)))
-        (error "Polys not in same var -- MUL POLY" (list p1 p2))))
+    (make-poly
+        (variable p1)
+        (mul-terms (term-list p1) (term-list p2))))
   
-  ; (define (negate-poly p)
-  ;   (mul-poly p ; multiply p by -1 in poly form (-1x^0 )
-  ;     (make-poly (variable p) (make-dense-termlist (list (make-term 0 -1))))))  ; need to create new tagged list -- make poly doesn't do this automatically
-
-  ; (define (sub-poly a b)
-  ;   (add-poly a (negate-poly b)))
-
   (define (sub-poly a b)
-    (make-poly (variable a) (sub-terms (term-list a) (term-list b)))) 
+    (make-poly (variable a) (sub-terms (term-list a) (term-list b))))
 
   (define (div-poly p1 p2)
-    (if (same-variable? (variable p1) (variable p2))
-      (make-poly
-        (variable p1)
-        (div-terms (term-list p1) (term-list p2)))
-      (error "Polys not in same var -- DIV-POLY" (list p1 p2))))
+    (make-poly
+      (variable p1)
+      (car (div-terms (term-list p1) (term-list p2)))))  ; ignoring remainder for now
+
+  (define (not-really-a-poly? p)
+    (= 0 (order (first-term (term-list p)))))
+
+
+  ;; if zero-term >> just convert to other, no wrapping
+  ;; otherwise, make zero-term
+  (define (convert-and-apply op p1 p2)
+    (cond ((same-variable? (variable p1) (variable p2))
+            (op p1 p2))
+          ((not-really-a-poly? p1)
+              (op (make-poly (variable p2) (term-list p1)) p2))
+          ((not-really-a-poly? p2)
+              (op p1 (make-poly (variable p1) (term-list p2))))
+          ((op 
+              p1
+              (make-poly
+                  (variable p1)
+                  (make-dense-termlist (list (make-term 0 (tag p2)))))))))
+
+  (define (get-n-term n term-list)
+    (let ((term (first-term term-list)))
+      (cond ((= n (order term)) term) ; found it
+            ((< n (order term))       ; not there yet
+                (get-n-term n (rest-terms term-list)))
+            (else (make-term 0 0))))) ; not in list
+
+  (define (equ-terms? terms1 terms2)
+    (if (and (empty-termlist? terms1) (empty-termlist? terms2))
+       true
+       (let ((t1 (first-term terms1)) (t2 (first-term terms2)))
+          (if (and (= (order t1) (order t2)) ; order and coeff the same
+                   (equ? (coeff t1) (coeff t2)))
+            (equ-terms? (rest-terms terms1) (rest-terms terms2))
+            false))))
+
+  (define (equ-poly? p1 p2)
+    (or (and (eq? (variable p1) (variable p2))            ; same var and all terms the same
+             (equ-terms? (term-list p1) (term-list p2)))
+        (and (not-really-a-poly? p1)
+             (not-really-a-poly? p2))))
 
 
   (define (tag x) (attach-tag 'polynomial x))
   (put 'add '(polynomial polynomial)
-      (lambda (x y) (tag (add-poly x y))))
+      (lambda (x y) (tag (convert-and-apply add-poly x y))))
   (put 'sub '(polynomial polynomial)
-      (lambda (x y) (tag (sub-poly x y))))
+      (lambda (x y) (tag (convert-and-apply sub-poly x y))))
   (put 'mul '(polynomial polynomial)
-      (lambda (x y) (tag (mul-poly x y))))
+      (lambda (x y) (tag (convert-and-apply mul-poly x y))))
   (put 'div '(polynomial polynomial)
-      (lambda (x y) (tag (div-poly x y))))  
+      (lambda (x y) (tag (convert-and-apply div-poly x y))))  
   (put 'make-dense 'polynomial
       (lambda (var terms) 
         (tag (make-poly var 
@@ -486,7 +516,15 @@
         (tag (make-poly var 
                         (attach-tag 'sparse terms)))))
   (put '=zero? '(polynomial) empty-termlist?) 
-    'done)
+  (put 'equ? '(polynomial polynomial) equ-poly?)
+
+  (put 'project '(polynomial)
+    (lambda (p) ; just return the zero-th term as a complex number 
+      (make-complex-from-real-imag 
+          (coeff (get-n-term 0 (term-list p))) 
+          0)))
+
+  'done)
 
 (install-poly-math-package)
 
@@ -511,85 +549,19 @@
     (make-complex-from-real-imag 
       (attach-tag 'rational n) ;;make sure we store as rational embedded in complex 
       0))
+  (define (complex->polynomial n)  ; poly with one, zero-order term
+    (make-polynomial 'coerced (list (list 0 (attach-tag 'complex n)))))
 
   (put-coercion 'scheme-number 'rational 
     scheme-number->rational)
   (put-coercion 'rational 'complex 
     rational->complex)
+  (put-coercion 'complex 'polynomial
+    complex->polynomial)
  
  'done)
 
 (install-coercions)
-
-; Updated apply-generic to try coercion
-; (define (apply-generic op . args)
-;   (define (lookup-error op tags)
-;     (error "No method for these types" (list op tags)))
-;   (let ((type-tags (map type-tag args)))
-;     (let ((proc (get op type-tags)))
-;       (if proc
-;         (apply proc (map contents args)) 
-;         (if (and (= (length args) 2) 
-;             (not (eq? (car type-tags) (cadr type-tags))))  ; ADDED to prevent attempted coercion on same type
-;           (let 
-;             ((type1 (car type-tags))
-;               (type2 (cadr type-tags))
-;               (a1 (car args))
-;               (a2 (cadr args)))
-;             (let 
-;               ((t1->t2 (get-coercion type1 type2))
-;               (t2->t1 (get-coercion type2 type1)))
-;               (cond
-;                 (t1->t2 (apply-generic op (t1->t2 a1) a2))
-;                 (t2->t1 (apply-generic op a1 (t2->t1 a2)))
-;                 (else (lookup-error op type-tags)))))
-;           (lookup-error op type-tags))))))
-
-
-; (define (apply-generic op . args)
-;   (define (every test elements)
-;     (cond
-;       ((null? elements) true)
-;       ((test (car elements)) (every test (cdr elements)))
-;       (else false)))
-;   (define (some test elements)
-;     (cond 
-;       ((null? elements) false)
-;       ((test (car elements)) (car elements))
-;       (else (some test (cdr elements)))))
-;   (define (find-coercion-type types) ; find first type where every other type converts to it
-;     (some 
-;       (lambda (target)
-;         (every 
-;           (lambda (test) 
-;             (or 
-;               (eq? test target) 
-;               (get-coercion test target))) ; either same type or coercion procedure exists
-;           types))
-;       types))
-;   (define (convert-args-to-type target-type args)
-;     (map 
-;       (lambda (a)
-;         (if (eq? (type-tag a) target-type)
-;           a
-;           ((get-coercion (type-tag a) target-type) a))) ; get and perform coercion
-;       args))
-;   (define (lookup-error op tags)
-;     (error "No method for these types" (list op tags)))
-;   (let ((type-tags (map type-tag args)))
-;     (let ((proc (get op type-tags)))
-;       (if proc
-;         (apply proc (map contents args))
-;         (if (some ; not already all the same type
-;               (lambda (t) (not (eq? t (car type-tags))))
-;               type-tags) 
-;           (let ((target-type (find-coercion-type type-tags)))
-;             (if target-type  
-;               (apply ;if we have a target type, map all args to this type and call apply-generic again
-;                 apply-generic 
-;                 (cons op (convert-args-to-type target-type args)))
-;               (lookup-error op type-tags)))
-;           (lookup-error op type-tags))))))
 
 ; Using these, we can define drop:
 (define (drop n)
@@ -603,7 +575,7 @@
 
 ; Now let's get project set up. First defer to apply-generic:
 (define (project n)
-  (apply-generic 'project 'no-drop n))
+  (apply-generic 'project 'no-drop n)) ; specific versions of project are in individual packages
 
 (define (install-raise)
   (define (coerce n type1 type2)
@@ -613,6 +585,8 @@
     (lambda (n) (coerce n 'scheme-number 'rational)))
   (put 'raise '(rational)       ; rational->complex
     (lambda (n) (coerce n 'rational 'complex)))
+  (put 'raise '(complex)
+    (lambda (n) (coerce n 'complex 'polynomial)))
   'done)
 
 (define (raise n)
@@ -621,7 +595,7 @@
 (install-raise)
 
 
-(define tower (list 'scheme-number 'rational 'complex))
+(define tower (list 'scheme-number 'rational 'complex 'polynomial))
 (define (position x seq) ; zero-indexed
   (define (pos-iter seq ix)
     (cond
@@ -638,7 +612,6 @@
 
 (define (raises-to typeA typeB)
   (before typeA typeB tower))
-
 
 (define (highest-type num-types)
   (accumulate
@@ -671,26 +644,53 @@
 
 
 ; with drop
+; (define (apply-generic op . args)
+;   (newline)
+;   (display (list "apply-generic" op args))
+;   (define (lookup-error op tags)
+;     (error "No method for these types" (list op tags)))
+;   (define (apply-generic-internal args)
+;     (let ((type-tags (map type-tag args)))
+;       (display (list "tags" type-tags))
+;       (let ((proc (get op type-tags)))
+;         (if proc
+;             (apply proc (map contents args))
+;           (let ((coerce-to-type (highest-type type-tags)))
+;             (if (every  ;; every type is already the highest type --> nothing to coerce to!
+;                 (lambda (type) (equal? type coerce-to-type)) 
+;                 type-tags)
+;               (lookup-error op type-tags)
+;               (apply ; have to use apply here or args could get nested in one too many lists
+;                 apply-generic
+;                 (cons 
+;                   op 
+;                   (map (lambda (a) (raise-until a coerce-to-type)) args)))))))))
+;   (if (eq? 'no-drop (car args))
+;     (apply-generic-internal (cdr args))
+;     (drop (apply-generic-internal args))))
+
 (define (apply-generic op . args)
+  ; (newline)
+  ; (display (list "apply-generic" op args))
   (define (lookup-error op tags)
     (error "No method for these types" (list op tags)))
-  (define (apply-generic-internal args)
-    (let ((type-tags (map type-tag args)))
-    (let ((proc (get op type-tags)))
-      (if proc
-          (apply proc (map contents args))
-        (let ((coerce-to-type (highest-type type-tags)))
-          (if (every  ;; every type is already the highest type --> nothing to coerce to!
-              (lambda (type) (equal? type coerce-to-type)) 
-              type-tags)
-            (lookup-error op type-tags)
-            (apply ; have to use apply here or args could get nested in one too many lists
-              apply-generic
-              (cons 
-                op 
-                (map (lambda (a) (raise-until a coerce-to-type)) args)))))))))
-  (if (eq? 'no-drop (car args))
-    (apply-generic-internal (cdr args))
-    (drop (apply-generic-internal args))))
+  (let ((no-drop (eq? (car args) 'no-drop)))
+    (define (apply-generic-internal args)
+      (let ((type-tags (map type-tag args)))
+        (let ((proc (get op type-tags)))
+          (if proc        ;; found proc so apply it
+              (apply proc (map contents args))
+              (if (every  ;; all of same type = nothing to convert = error
+                    (lambda (type) (eq? type (car type-tags))) 
+                    type-tags)
+                (lookup-error op type-tags)
+                (let ((coerce-to-type (highest-type type-tags)))
+                  (let ((coerced-args (map (lambda (arg) (raise-until arg coerce-to-type)) args)))
+                    (if no-drop
+                      (apply apply-generic (cons op (cons 'no-drop coerced-args)))
+                      (apply apply-generic (cons op coerced-args))))))))))
+    (if no-drop
+      (apply-generic-internal (cdr args))
+      (drop (apply-generic-internal args)))))
 
 
