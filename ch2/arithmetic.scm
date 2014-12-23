@@ -65,6 +65,7 @@
 (define (cos-gen n) (apply-generic 'cos n))
 (define (atan-gen n m) (apply-generic 'atan n m))
 (define (sqrt-gen n) (apply-generic 'sqrt n))
+(define (greatest-common-divisor a b) (apply-generic 'gcd a b))
 
 ;; Predicates -- actual code added to the packages above so they can use selectors, etc.
 (define (equ? x y) (apply-generic 'equ? 'no-drop x y))
@@ -93,6 +94,8 @@
   (put '=zero? '(scheme-number)
     (lambda (x) (= x 0)))
 
+  (put 'gcd '(scheme-number scheme-number) gcd)
+
   (put 'make 'scheme-number
     (lambda (x) (tag x)))
   'done)
@@ -106,17 +109,21 @@
 (define (install-rational-package)
   (define (tag x)
     (attach-tag 'rational x))
-  (define (make-rat n d)
-    (let ((g (gcd n d)))
-      (list (div n g) (div d g))))
+  (define (make-rat n d) (list n d))
+   ; (let ((g (gcd n d)))
+     ; (list (div n g) (div d g))))
   (define (numer r) (car r))
   (define (denom r) (cadr r))
   (define (add-rat x y)
-    (make-rat
-      (add
-        (mul (numer x) (denom y))
-        (mul (denom x) (numer y)))
-      (mul (denom x) (denom y))))
+    (if (equ? (denom x) (denom y))
+	(make-rat
+	 (add (numer x) (numer y))
+	 (denom x))
+	(make-rat
+	 (add
+	  (mul (numer x) (denom y))
+	  (mul (denom x) (numer y)))
+	 (mul (denom x) (denom y)))))
   (define (sub-rat x y)
     (add-rat x 
       (make-rat
@@ -132,7 +139,7 @@
 
 
   (define (to-real n)
-    (/ (numer n) (denom n)))
+    (div (numer n) (denom n)))
 
   (define (real-fn f)
     (lambda (n) (f (to-real n))))
@@ -154,8 +161,8 @@
 
   (put 'equ? '(rational rational)
     (lambda (x y) 
-      (and (= (numer x) (numer y)) 
-        (= (denom x) (denom y)))))
+      (and (equ? (numer x) (numer y)) 
+        (equ? (denom x) (denom y)))))
   (put '=zero? '(rational)
     (lambda (x) (= 0 (numer x))))
   (put 'project '(rational)
@@ -403,15 +410,32 @@
                   (mul (coeff t) (coeff next-term)))
                 (mul-term-by-all-terms t (rest-terms L))))))
 
+  (define (quotient-terms numer-terms denom-terms)
+    (car (div-terms numer-terms denom-terms)))
+
+  (define (remainder-terms numer-terms denom-terms)
+    (cadr (div-terms numer-terms denom-terms)))
+
+  (define (pseudoremainder-terms P Q)
+    (let ((O1 (order (first-term P)))
+          (O2 (order (first-term Q)))
+          (c (coeff (first-term Q))))
+      (let ((int-factor (expt c (+ 1 (- O1 O2)))))
+        (remainder-terms 
+          (mul-term-by-all-terms
+              (make-term 0 int-factor)
+              P)
+          Q))))
+
   (define (div-terms numer-terms denom-terms)
     (if (empty-termlist? numer-terms)  ; divisor is zero, no remainder
-      (list numer-terms numer-terms) ; return two empty lists (with tags)
+    	(list (the-empty-termlist) (the-empty-termlist))
       (let ((n (first-term numer-terms))
-          (d (first-term denom-terms)))
+	    (d (first-term denom-terms)))
         (if (> (order d) (order n)) ; base case -> dividend greater than divisor, so divisor becomes remainder, quotient is zero
           (list (the-empty-termlist) numer-terms) ;TODO: update empty-term-list to attach its own tag
           (let ((new-o (sub (order n) (order d)))
-              (new-c (div (coeff n) (coeff d))))
+		(new-c (div (coeff n) (coeff d))))
             (let ((rest-of-result 
                   (div-terms 
                     (sub-terms 
@@ -422,6 +446,23 @@
                 (adjoin-term (make-term new-o new-c) (car rest-of-result)) ; add first term to quotient
                 (cadr rest-of-result)) ; remainder stays the same
               ))))))
+
+  ; (define (gcd-terms a b)
+  ;   (if (empty-termlist? b)
+  ;     	a
+  ;     	(gcd-terms b (pseudoremainder-terms a b))))
+
+  
+  (define (map-terms op L)
+    (if (empty-termlist? L)
+      '()
+      (cons (op (first-term L)) (map-terms op (rest-terms L)))))
+
+  (define (gcd-terms a b)
+    (if (empty-termlist? b)
+        (let ((div-by (apply gcd (map-terms coeff a))))
+          (quotient-terms a (make-dense-termlist (list (make-term 0 div-by)))))
+        (gcd-terms b (pseudoremainder-terms a b))))
 
   ;; Polynomial procedures
   ;; Basic constructors, selectors
@@ -452,9 +493,10 @@
     (make-poly (variable a) (sub-terms (term-list a) (term-list b))))
 
   (define (div-poly p1 p2)
-    (make-poly
-      (variable p1)
-      (car (div-terms (term-list p1) (term-list p2)))))  ; ignoring remainder for now
+    (let ((result (div-terms (term-list p1) (term-list p2))))
+      (list
+       (make-poly (variable p1) (car result))
+       (make-poly (variable p1) (cadr result)))))
 
   (define (not-really-a-poly? p)
     (= 0 (order (first-term (term-list p)))))
@@ -476,12 +518,15 @@
                   (make-dense-termlist (list (make-term 0 (tag p2)))))))))
 
   (define (get-n-term n term-list)
-    (let ((term (first-term term-list)))
-      (cond ((= n (order term)) term) ; found it
-            ((< n (order term))       ; not there yet
-                (get-n-term n (rest-terms term-list)))
-            (else (make-term 0 0))))) ; not in list
-
+    (define (empty-term) (make-term 0 0))
+    (if (empty-termlist? term-list)
+    	(empty-term)
+    	(let ((term (first-term term-list)))
+    	  (cond ((= n (order term)) term) ; found it
+          		((< n (order term))       ; not there yet
+      		        (get-n-term n (rest-terms term-list)))
+          		(else (empty-term)))))) ; not in list
+    
   (define (equ-terms? terms1 terms2)
     (if (and (empty-termlist? terms1) (empty-termlist? terms2))
        true
@@ -497,6 +542,11 @@
         (and (not-really-a-poly? p1)
              (not-really-a-poly? p2))))
 
+  (define (gcd-poly p1 p2)
+    (if (same-variable? (variable p1) (variable p2))
+	    (make-poly (variable p1) (gcd-terms (term-list p1) (term-list p2)))
+      (error "Polynomials not in same variable -- GCD-POLY" (list p1 p2))))
+    
 
   (define (tag x) (attach-tag 'polynomial x))
   (put 'add '(polynomial polynomial)
@@ -506,7 +556,16 @@
   (put 'mul '(polynomial polynomial)
       (lambda (x y) (tag (convert-and-apply mul-poly x y))))
   (put 'div '(polynomial polynomial)
-      (lambda (x y) (tag (convert-and-apply div-poly x y))))  
+      (lambda (x y) 
+	(let ((result (convert-and-apply div-poly x y)))
+	  (newline)
+	  (if (empty-termlist? (term-list (car result))) ; if only a remainder, return 0 since rest of system doesn't know how to handle remainders
+	      0
+	      (tag (car result))))))
+
+  (put 'gcd '(polynomial polynomial) 
+       (lambda (p1 p2) (tag (gcd-poly p1 p2))))
+
   (put 'make-dense 'polynomial
       (lambda (var terms) 
         (tag (make-poly var 
@@ -550,7 +609,7 @@
       (attach-tag 'rational n) ;;make sure we store as rational embedded in complex 
       0))
   (define (complex->polynomial n)  ; poly with one, zero-order term
-    (make-polynomial 'coerced (list (list 0 (attach-tag 'complex n)))))
+    (make-polynomial 'coerced (list (list 0 (attach-tag 'complex n))))) ; drop n as far as we can before making the poly
 
   (put-coercion 'scheme-number 'rational 
     scheme-number->rational)
@@ -671,8 +730,8 @@
 
 (define (apply-generic op . args)
   ; (newline)
-  ; (display (list "apply-generic" op args))
-  (define (lookup-error op tags)
+  ; (display (list "apply-generic" op args)) 
+  (define (lookup-error op tags)	
     (error "No method for these types" (list op tags)))
   (let ((no-drop (eq? (car args) 'no-drop)))
     (define (apply-generic-internal args)
