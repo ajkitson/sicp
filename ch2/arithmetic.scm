@@ -72,8 +72,16 @@
 (define (=zero? x) (apply-generic '=zero? 'no-drop x))
 
 
+(define (reduce x y) (apply-generic 'reduce x y))
+
 ;; Scheme-Number
 (define (install-scheme-number-package)
+
+  (define (reduce-integers n d)
+  (let ((g (gcd n d)))
+    (list (/ n g) (/ d g))))
+
+
   (define (tag x) 
     (attach-tag 'scheme-number x))
   (put 'add '(scheme-number scheme-number)
@@ -95,6 +103,7 @@
     (lambda (x) (= x 0)))
 
   (put 'gcd '(scheme-number scheme-number) gcd)
+  (put 'reduce '(scheme-number scheme-number) reduce-integers)
 
   (put 'make 'scheme-number
     (lambda (x) (tag x)))
@@ -109,9 +118,10 @@
 (define (install-rational-package)
   (define (tag x)
     (attach-tag 'rational x))
-  (define (make-rat n d) (list n d))
+  ; (define (make-rat n d) (list n d))
    ; (let ((g (gcd n d)))
      ; (list (div n g) (div d g))))
+  (define (make-rat n d) (reduce n d))
   (define (numer r) (car r))
   (define (denom r) (cadr r))
   (define (add-rat x y)
@@ -464,6 +474,28 @@
           (quotient-terms a (make-dense-termlist (list (make-term 0 div-by)))))
         (gcd-terms b (pseudoremainder-terms a b))))
 
+
+  (define (max a b)
+    (if (> a b) a b))
+
+  (define (reduce-terms n d)
+    (let ((g (gcd-terms n d)))
+      (let ((factor (expt (coeff (first-term g))
+                (+ 1 (- (max (order (first-term n)) (order (first-term d))) 
+                    (order (first-term g)))))))
+        (let ((new-n (mul-term-by-all-terms (make-term 0 factor) n))
+              (new-d (mul-term-by-all-terms (make-term 0 factor) d)))
+          (let ((new-g (gcd-terms new-n new-d)))
+            (list (quotient-terms new-n new-g) (quotient-terms new-d new-g)))))))
+
+
+  (define (reduce-poly p1 p2)
+    (if (same-variable? (variable p1) (variable p2))
+      (let ((new-terms (reduce-terms (term-list p1) (term-list p2))))
+        (list (make-poly (variable p1) (car new-terms))
+              (make-poly (variable p2) (cadr new-terms))))
+      (error "polynomials not in same variable -- REDUCE-POLY" (list p1 p2))))
+
   ;; Polynomial procedures
   ;; Basic constructors, selectors
   (define (make-poly var term-list)
@@ -557,11 +589,16 @@
       (lambda (x y) (tag (convert-and-apply mul-poly x y))))
   (put 'div '(polynomial polynomial)
       (lambda (x y) 
-	(let ((result (convert-and-apply div-poly x y)))
-	  (newline)
-	  (if (empty-termlist? (term-list (car result))) ; if only a remainder, return 0 since rest of system doesn't know how to handle remainders
-	      0
-	      (tag (car result))))))
+      	(let ((result (convert-and-apply div-poly x y)))
+      	  (newline)
+      	  (if (empty-termlist? (term-list (car result))) ; if only a remainder, return 0 since rest of system doesn't know how to handle remainders
+      	      0
+      	      (tag (car result))))))
+  (put 'reduce '(polynomial polynomial)
+      (lambda (x y) 
+        (let ((new-polys (reduce-poly x y)))
+          (list (tag (car new-polys)) 
+                (tag (cadr new-polys))))))
 
   (put 'gcd '(polynomial polynomial) 
        (lambda (p1 p2) (tag (gcd-poly p1 p2))))
