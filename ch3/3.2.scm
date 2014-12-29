@@ -12,14 +12,14 @@
 ; 1
 
 (define (make-monitored f)
-	(let ((cnt 0))
-		(lambda (arg)
-			(cond 
-				((eq? 'how-many-calls? arg) cnt)
-				((eq? 'reset-count arg) (set! cnt 0))
-				(else (set! cnt (+ cnt 1))
-					  (f arg))))))
-					  
+    (let ((cnt 0))
+        (lambda (arg)
+            (cond 
+                ((eq? 'how-many-calls? arg) cnt)
+                ((eq? 'reset-count arg) (set! cnt 0))
+                (else (set! cnt (+ cnt 1))
+                      (f arg))))))
+                      
 1 ]=> (define s (make-monitored sqrt))
 ;Value: s
 
@@ -42,4 +42,4 @@
 ;Value: 3
 
 1 ]=> (s 'how-many-calls?)
-;Value: 0					  
+;Value: 0                      
