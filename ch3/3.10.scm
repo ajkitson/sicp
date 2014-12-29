@@ -2,12 +2,12 @@
 ; state variable explicitly, using let, as follows:
 
 ; (define (make-withdraw initial-amount)
-; 	(let ((balance initial-amount))
-; 		(lambda (amount)
-; 			(if (>= balance amount)
-; 				(begin (set! balance (- balance amount))
-; 					balance)
-; 				("Insufficient funds")))))
+;     (let ((balance initial-amount))
+;         (lambda (amount)
+;             (if (>= balance amount)
+;                 (begin (set! balance (- balance amount))
+;                     balance)
+;                 ("Insufficient funds")))))
 
 ; Recall from section 1.3.2 that let is simply syntactic sugar for a procedure call:
 ; (let ((<var> <exp>)) <body>)
@@ -32,33 +32,33 @@
 ; Here's the make-withdraw definition:
  ______________________
 | make-withdraw: ------|--> @ -----------> parameters: initial-amount
-|______________________|<-- @ (env ptr)	   body: (let ((balance initial-amount))
-											 		(lambda (amount)
-														(if (>= balance amount)
-															(begin (set! balance (- balance amount))
-																balance)
-															("Insufficient funds"))))
+|______________________|<-- @ (env ptr)       body: (let ((balance initial-amount))
+                                                     (lambda (amount)
+                                                        (if (>= balance amount)
+                                                            (begin (set! balance (- balance amount))
+                                                                balance)
+                                                            ("Insufficient funds"))))
 
 
 ; And now when we define W1, we get a bit more complicated of a setup:
  _______________________
 | make-withdraw: -------|--> @ -----------> parameters: initial-amount
-|					    |<-- @ (env ptr)		  body: (let ((balance initial-amount))
-|					    |							 		(lambda (amount)
-|					    |										(if (>= balance amount)
-|						|											(begin (set! balance (- balance amount))
-|						|												balance)
-|						|											("Insufficient funds"))))
-|						|
+|                        |<-- @ (env ptr)          body: (let ((balance initial-amount))
+|                        |                                     (lambda (amount)
+|                        |                                        (if (>= balance amount)
+|                        |                                            (begin (set! balance (- balance amount))
+|                        |                                                balance)
+|                        |                                            ("Insufficient funds"))))
+|                        |
 | W1:-------------------| --> @ ----------> parameters: amount
-|_______________________|	  @					  body: (lambda (amount)
-				   ^     	  |	  							(if (>= balance amount)
- __________________|	   	  |									(begin (set! balance (- balance amount))
-|initial-amount:100|(created  |										balance)
-|__________________|  by let) |									("Insufficient funds")))
-				   ^    	  |
- __________________|		  |												
-|balance: 100      | <--------|	
+|_______________________|      @                      body: (lambda (amount)
+                   ^           |                                  (if (>= balance amount)
+ __________________|             |                                    (begin (set! balance (- balance amount))
+|initial-amount:100|(created  |                                        balance)
+|__________________|  by let) |                                    ("Insufficient funds")))
+                   ^          |
+ __________________|          |                                                
+|balance: 100      | <--------|    
 |__________________| (created by lambda)
 
 
@@ -67,16 +67,16 @@
 ; Here's what happens during the (W1 50) evaluation:
  _______________________
 | W1:-------------------| --> @ ----------> parameters: amount
-|_______________________|	  @					  body: (lambda (amount)
-				   ^     	  |	  							(if (>= balance amount)
- __________________|	   	  |									(begin (set! balance (- balance amount))
-|initial-amount:100|(created  |										balance)
-|__________________|  by let) |									("Insufficient funds")))
-				   ^    	  |
- __________________|		  |												
-|balance: 100      | <--------|	
+|_______________________|      @                      body: (lambda (amount)
+                   ^           |                                  (if (>= balance amount)
+ __________________|             |                                    (begin (set! balance (- balance amount))
+|initial-amount:100|(created  |                                        balance)
+|__________________|  by let) |                                    ("Insufficient funds")))
+                   ^          |
+ __________________|          |                                                
+|balance: 100      | <--------|    
 |__________________| (created by lambda)
-				   ^
+                   ^
  __________________|
 |amount: 50        | 
 |__________________| (created by (W1 50) call) (if (>= balance amount)...)
@@ -84,14 +84,14 @@
 ; And here is after, with balance changed and the environment created for (W1 50) gone since nothing points at it anymore:
  _______________________
 | W1:-------------------| --> @ ----------> parameters: amount
-|_______________________|	  @					  body: (lambda (amount)
-				   ^     	  |	  							(if (>= balance amount)
- __________________|	   	  |									(begin (set! balance (- balance amount))
-|initial-amount:100|(created  |										balance)
-|__________________|  by let) |									("Insufficient funds")))
-				   ^    	  |
- __________________|		  |												
-|balance: 50       | <--------|	
+|_______________________|      @                      body: (lambda (amount)
+                   ^           |                                  (if (>= balance amount)
+ __________________|             |                                    (begin (set! balance (- balance amount))
+|initial-amount:100|(created  |                                        balance)
+|__________________|  by let) |                                    ("Insufficient funds")))
+                   ^          |
+ __________________|          |                                                
+|balance: 50       | <--------|    
 |__________________| (created by lambda)
 
 
@@ -100,27 +100,27 @@
 
 
  __________________ 
-|balance: 100	   |(created by lambda)
-|__________________| <--------|	 
-	|			     		  |  	 
- ___|______________		 	  |
+|balance: 100       |(created by lambda)
+|__________________| <--------|     
+    |                           |       
+ ___|______________               |
 |initial-amount:100| (created |
 |__________________|  by let) |
-	|						  |
- ___|___________________	  |
+    |                          |
+ ___|___________________      |
 | W2:-------------------| --> @
-|						|	  @ --------|
-|						|				|	   
-|						|				|		
+|                        |      @ --------|
+|                        |                |       
+|                        |                |        
 | W1:-------------------| --> @ ----------> parameters: amount
-|_______________________|	  @					  body: (lambda (amount)
-				   ^     	  |	  							(if (>= balance amount)
- __________________|	   	  |									(begin (set! balance (- balance amount))
-|initial-amount:100|(created  |										balance)
-|__________________|  by let) |									("Insufficient funds")))
-				   ^    	  |
- __________________|		  |												
-|balance: 50       | <--------|	
+|_______________________|      @                      body: (lambda (amount)
+                   ^           |                                  (if (>= balance amount)
+ __________________|             |                                    (begin (set! balance (- balance amount))
+|initial-amount:100|(created  |                                        balance)
+|__________________|  by let) |                                    ("Insufficient funds")))
+                   ^          |
+ __________________|          |                                                
+|balance: 50       | <--------|    
 |__________________| (created by lambda)
 
 
