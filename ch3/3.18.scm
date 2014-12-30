@@ -6,8 +6,8 @@
 ; if the pair we're considering now also exists further down the cdr chain. 
 ;
 ; The obvious way to solve this is to just check whether x exists in (cdr x). This is O(n^2), but since our next exercise is to implement
-; a constant time version, I assumes that's expected for now.
-
+; a constant time version, I assumes that's expected for now. (Update: 3.19 actually asks us to implement a constant SPACE version...)
+; 
 ; This is my first shot:
 (define (contains-cycle? x)
     (define (appears-again? p seq) 
