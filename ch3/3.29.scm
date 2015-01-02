@@ -43,3 +43,38 @@
 ;
 ; In any case, let's just say that it's two inverter delays and an and-gate delay for a change in a single input wire, and beyond that
 ; we need to know more about the system to say how simutaneous or overlapping changes are handled.
+; =====
+; UPDATE: Read through the implementation of the delay, and here's how it works:
+; - The update procedures are registered when the wires are attached to the different gates, and they are run when attached. But that's
+;   not the primary case.
+; - Once you build out a circuit, you change the value of one or more of the wires. When you do this, we it calls each of the procedures
+;   that had been registered to be run whenever the signal changed. However (at least for our gates), these procedures which run 
+;   immediately, only schedule some more code to be run later, after a delay. It's this process that's of interest.
+; - When code is scheduled to be run after a delay, it's added to an agenda, with different pieces of code to be run at different times.
+;   Any given time may have multiple pieces of code to be run; they are run in the order in which they were added (FIFO). 
+; - The agenda is built when the value on the wire is changed, but we do not run through the agenda until the propogate procedure is 
+;   executed.
+; - If two inputs to a gate change, that gate will be evaluated twice and produce two corresponding outputs, but since the values for the 
+;   input wires will not have changed, the output should be the same. Since set-signal! only runs through the registered tasks when the
+;   signal actually changes, we will only do this for the first set-signal call (assuming the value actually changed).
+; - The propogation stops only when the agenda is empty
+; - Code on the agenda can add more code to the agenda, and so perpetuate the propogation.
+;
+; Now we can add up our delays. 
+; - One inverter delay for each changed input 
+; - One and-gate delay for each inverted input (since value always changes with inversion, an and-gate delay for each changed input)
+; - One inverter delay IF the output of the and-gate changed.
+;
+; Note that the first inverter delays are added in the same timeslot, the and-gate delays are also in the same timeslot (because it's
+; the same and-gate delay added from the same timeslot (the one shared by the two inverter delays)), and the last inverter delay
+; has it's own timeslot, after the and-gate delay. 
+;
+; It looks like we get into parallelization more soon and will better understand what sharing a timeslot actually means in practice.
+
+
+
+
+
+
+
+
