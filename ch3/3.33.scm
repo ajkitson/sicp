@@ -9,6 +9,33 @@
 ; different. 
 ;
 
+; Update: realized I misread the question and was supposed to compose averager out of adder and multipler. Oops! Here's my new code:
+(define (averager a b c)
+    (let ((sum (make-connector))
+          (half (make-connector)))
+        (adder a b sum)
+        (constant 0.5 half)
+        (multiplier sum half c)))
+
+; in action:
+1 ]=> (define av (averager a b c))
+1 ]=> (set-value! a 10 'andy)
+;Value: done
+1 ]=> (set-value! b 100 'andy)
+;Value: done
+1 ]=> (get-value c)
+;Value: 55.
+1 ]=> (forget-value! b 'andy)
+;Value: done
+1 ]=> (set-value! c 40 'andy)
+;Value: done
+1 ]=> (get-value b)
+;Value: 70.
+
+
+
+; Here's my old code:
+
 (define (averager a b c)
     (define (compute-other-val a c)
         (- (* 2 c) a))
