@@ -19,40 +19,40 @@
 ;  - After Paul and before Peter:    100 - 20 = 80, 80 / 2 = 40, 40 + 10 = 50
 ; 
 ; b. If the system allows interleaving, we can get some really weird stuff. Let's consider two cases:
-;
-; In this case, Paul overwrites Peter's update, and Mary's calculation gets two conflicting values for balance:
-Bank    Peter                       Paul                    Mary
-100     access balance: 100
-                                    access balance: 100
-                                                            access balance: 100
-        new-value: 100 + 10         
-                                    new-value: 100 - 20 
-        set! balance 110
-110
-                                                            new-value: 100 - (/ balance 2)
-                                                            access balance: 110
-                                    set! balance: 80
-80
-                                                            new-value: 100 - (/ 110 2)
-                                                            set! balance: 45
-45
+; ;
+; ; In this case, Paul overwrites Peter's update, and Mary's calculation gets two conflicting values for balance:
+; Bank    Peter                       Paul                    Mary
+; 100     access balance: 100
+;                                     access balance: 100
+;                                                             access balance: 100
+;         new-value: 100 + 10         
+;                                     new-value: 100 - 20 
+;         set! balance 110
+; 110
+;                                                             new-value: 100 - (/ balance 2)
+;                                                             access balance: 110
+;                                     set! balance: 80
+; 80
+;                                                             new-value: 100 - (/ 110 2)
+;                                                             set! balance: 45
+; 45
 
 
-Bank    Peter                       Paul                    Mary
-100                                 access balance: 100         
-                                    new-value: 100 - 20
-                                    set! balance: 80
-80
-        access balance: 80                              
-                                                            access balance: 80
-        new-value: 80 + 10
-                                                            new-value: 80 - (/ balance 2)
-        set! balance: 90
-90
-                                                            access balance: 90
-                                                            new-value: (80 - (/ 90 2))
-                                                            set! balance: 35
-35
+; Bank    Peter                       Paul                    Mary
+; 100                                 access balance: 100         
+;                                     new-value: 100 - 20
+;                                     set! balance: 80
+; 80
+;         access balance: 80                              
+;                                                             access balance: 80
+;         new-value: 80 + 10
+;                                                             new-value: 80 - (/ balance 2)
+;         set! balance: 90
+; 90
+;                                                             access balance: 90
+;                                                             new-value: (80 - (/ 90 2))
+;                                                             set! balance: 35
+; 35
 
 
 
