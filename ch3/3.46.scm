@@ -3,13 +3,14 @@
 ; acquire the mutex at the same time.
 ; ========
 ; Let's take a look at test-and-set! first:
-
-(define (test-and-set! cell)
-    (if (car cell)
-        true
-        (begin 
-            (set-car! cell true)
-            false)))
+;
+; (define (test-and-set! cell)
+;     (if (car cell)
+;         true
+;         (begin 
+;             (set-car! cell true)
+;             false)))
+;
 ; The gap we need to be concerned about here is the one that exists between when we check (if (car cell)...) and when we evaluate
 ; (set-car! cell true). If we have one processe following close on the heels of another, the first might check (car cell), see that
 ; it's true, and so get ready to set the car to true. But there's a gap and in this gap the second process might check (car cell), too, 
