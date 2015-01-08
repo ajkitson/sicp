@@ -46,7 +46,8 @@
             (stream-filter pred (stream-cdr s)))))
 
 (define (add-streams s1 s2)
-    (stream-map + s1 s2))
+    ; (stream-map + s1 s2))
+    (stream-map (lambda (a b) (newline)(display "*")(+ a b)) s1 s2))
 
 (define (mul-streams s1 s2)
     (stream-map * s1 s2))
