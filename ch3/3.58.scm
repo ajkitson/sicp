@@ -21,9 +21,16 @@
 (3 . (7 . (expand 4 8 10)))
 (3 . (7 . (5 . (expand 0 8 10))))
 (3 . (7 . (5 . (0 . (expand 8 8 10)))))
-(3 . (7 . (5 . (0 . (8 . (expand 0 8 10))))) ; start cycling
+(3 . (7 . (5 . (0 . (0 . (expand 0 8 10))))) ; start cycling
 
 ; I'm not sure what these are suppose to represent. They eventually fall into cycles after some bouncing around. 
 ; I checked, and the numbers above are correct. If there's something beyond the cycles I'm not seeing it.
 
+; UPDATE: I must have been tired last night. I glanced at this problem this morning and immediately recognized what we're doing.
+; We're computing the decimal version of a fraction, base 10:
 
+1 ]=> (/ 3 8.0)
+;Value: .375
+1 ]=> (/ 1 7.0)
+;Value: .14285714285714285
+1 ]=> 

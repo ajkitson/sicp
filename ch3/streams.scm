@@ -46,8 +46,8 @@
             (stream-filter pred (stream-cdr s)))))
 
 (define (add-streams s1 s2)
-    ; (stream-map + s1 s2))
-    (stream-map (lambda (a b) (newline)(display "*")(+ a b)) s1 s2))
+    (stream-map + s1 s2))
+    ; (stream-map (lambda (a b) (newline)(display "*")(+ a b)) s1 s2))
 
 (define (mul-streams s1 s2)
     (stream-map * s1 s2))
@@ -61,6 +61,13 @@
 (define (display-line x)
     (newline)
     (display x))
+
+(define (display-n-elems n s)
+    (if (and (> n 0) 
+             (not (stream-null? s)))
+        (begin 
+            (display-line (stream-car s))
+            (display-n-elems (- n 1) (stream-cdr)))))
 
 ;; special-purpose streams
 (define (integers-starting-from n)
