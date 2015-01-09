@@ -67,7 +67,18 @@
              (not (stream-null? s)))
         (begin 
             (display-line (stream-car s))
-            (display-n-elems (- n 1) (stream-cdr)))))
+            (display-n-elems (- n 1) (stream-cdr s)))))
+
+
+
+(define (accumulate-stream proc total n s)
+    (if (> n 0)
+        (accumulate-stream proc (proc total (stream-car s)) (- n 1) (stream-cdr s))
+        total))
+
+(define (sum-stream n s)
+    (accumulate-stream + 0.0 n s))
+
 
 ;; special-purpose streams
 (define (integers-starting-from n)
