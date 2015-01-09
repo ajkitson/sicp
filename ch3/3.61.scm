@@ -13,15 +13,26 @@
 ; We can do this just cobbling things together. We need the first element to be 1 since X = 1 - Sr * X. From there, we multiply
 ; X and Sr and scale it by -1. X is just (invert-unit-series S), and Sr is just the cdr of S. Then we use scale-stream to multiply 
 ; by -1.
+;
+; Actually, correction: we need the first element to be the constant term. 1 was used in the example above, but any constant will do.
 
+; (define (invert-unit-series s)
+;     (cons-stream 
+;         (stream-car s) ; constant term
+;         (scale-stream 
+;             (mul-series (invert-unit-series s) (stream-cdr s))
+;             -1)))
+
+; Updated to create a 
 (define (invert-unit-series s)
-    (cons-stream 
-        1
-        (scale-stream 
-            (mul-series (invert-unit-series s) (stream-cdr s))
-            -1)))
+    (define invert
+        (cons-stream 
+            (stream-car s) ; constant term
+            (scale-stream 
+                (mul-series invert (stream-cdr s))
+                -1)))
+    invert)
 
-; And this works! Note that you need to test with a series whose contant term is one, so cosine and exp work, but sine doesn't 
 
 1 ]=> (define test (mul-series cosine-series (invert-unit-series cosine-series)))
 1 ]=> (display-n-elems 10 test)
