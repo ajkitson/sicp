@@ -17,8 +17,8 @@
     (define guesses
         (cons-stream 1.0
                      (stream-map (lambda (guess)
-                                    (sqrt-improve guess x)
-                                    guesses))))
+                                    (sqrt-improve guess x))
+                                    guesses)))
     guesses)
 
 (define (sqrt-improve guess x)
