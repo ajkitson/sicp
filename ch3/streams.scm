@@ -10,7 +10,7 @@
 ; (define (stream-map proc s)
 ;     (if (stream-null? s)
 ;         the-empty-stream
-;         (cons-stream 
+;         (cons-stream
 ;             (proc (stream-car s))
 ;             (stream-map proc (stream-cdr s)))))
 
@@ -41,7 +41,7 @@
     (if (stream-null? s)
         the-empty-stream
         (if (pred (stream-car s))
-            (cons-stream (stream-car s) 
+            (cons-stream (stream-car s)
                          (stream-filter pred (stream-cdr s)))
             (stream-filter pred (stream-cdr s)))))
 
@@ -63,9 +63,9 @@
     (display x))
 
 (define (display-n-elems n s)
-    (if (and (> n 0) 
+    (if (and (> n 0)
              (not (stream-null? s)))
-        (begin 
+        (begin
             (display-line (stream-car s))
             (display-n-elems (- n 1) (stream-cdr s)))))
 
@@ -89,11 +89,12 @@
     (cons-stream a (fibgen b (+ a b))))
 (define (fibs) (fibgen 0 1))
 
-(define (seive s)
+(define (sieve s)
     (cons-stream
         (stream-car s)
-        (seive (stream-filter (lambda (x) (not (divisible? x (stream-car s)))) (stream-cdr s)))))
-(define primes (seive (integers-starting-from 2)))
+        (sieve (stream-filter (lambda (x) (not (divisible? x (stream-car s)))) (stream-cdr s)))))
+(define primes (sieve (integers-starting-from 2)))
+
 (define ones (cons-stream 1 ones))
 (define integers (cons-stream 1 (add-streams ones integers)))
 (define double (cons-stream 1 (scale-stream double 2)))
