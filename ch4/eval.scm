@@ -15,6 +15,7 @@
         ((begin? exp)
           (eval-sequence (begin-actions exp) env))
         ((cond? exp) (eval (cond->if exp) env))
+        ((let? exp) (eval (let->lambda exp) env))
         ((application? exp)
           (apply-new (eval (operator exp) env)
                  (list-of-values (operands exp) env)))
@@ -152,7 +153,6 @@
 (define (cond-map? clause)
   (eq? (cadr clause) '=>))
 (define (cond-map-procedure clause)
-  (display (list "clause" clause))
   (caddr clause)) ; grab 3rd elem in clause
 
 (define (cond->if exp)
@@ -179,6 +179,17 @@
           (make-if (cond-predicate first)
                    (sequence->exp (cond-actions first))
                    (expand-clauses rest)))))))
+
+; Let
+(define (let? exp) (tagged-list? exp 'let))
+(define (let-bindings exp) (cadr exp))
+(define (let-body exp) (cddr exp))
+(define (let->lambda exp)
+  (cons   ; use cons so args are not nested: ((lambda (param1 param2) body1 body2) arg1 arg2)
+    (make-lambda
+      (map car (let-bindings exp))
+      (let-body exp))
+    (map cadr (let-bindings exp))))
 
 ;; Testing Predicates
 (define (true? val) (not (false? val)))
