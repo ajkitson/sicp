@@ -11,7 +11,7 @@
         ((or? exp) (eval-or exp env))
         ((if? exp) (eval-if exp env))
         ((lambda? exp)
-          (make-procedure (lambda-parameters) (lambda-body) env))
+          (make-procedure (lambda-parameters exp) (lambda-body exp) env))
         ((begin? exp)
           (eval-sequence (begin-actions exp) env))
         ((cond? exp) (eval (cond->if exp) env))
@@ -31,7 +31,8 @@
             (extend-environment
               (procedure-parameters procedure)
               arguments
-              (procedure-environment procedure))))))
+              (procedure-environment procedure))))
+        (else (error "Unknown procedure type -- APPLY-NEW" procedure))))
 
 ;; Procedure Functions
 (define (list-of-values exp env)
@@ -107,7 +108,7 @@
 (define (lambda-parameters exp) (cadr exp))
 (define (lambda-body exp) (cddr exp))
 (define (make-lambda parameters body)
-  (cons 'lambda (cons parameters body)))
+  (cons 'lambda (cons parameters body))) ; '(lambda (parameters...) exp1 exp2...)
 
 (define (if? exp) (tagged-list? exp 'if))
 (define (if-predicate exp) (cadr exp))
@@ -148,6 +149,12 @@
 (define (cond-predicate clause) (car clause))
 (define (cond-actions clause) (cdr clause))
 
+(define (cond-map? clause)
+  (eq? (cadr clause) '=>))
+(define (cond-map-procedure clause)
+  (display (list "clause" clause))
+  (caddr clause)) ; grab 3rd elem in clause
+
 (define (cond->if exp)
   (expand-clauses (cond-clauses exp)))
 
@@ -156,15 +163,22 @@
     'false
     (let ((first (car clauses))
           (rest (cdr clauses)))
-      (display first)
-      (display rest)
       (if (cond-else-clause? first)
         (if (null? rest)
           (sequence->exp (cond-actions first))
           (error "ELSE clause isn't last -- COND->IF" clauses))
-        (make-if (cond-predicate first)
-                 (sequence->exp (cond-actions first))
-                 (expand-clauses rest))))))
+        (if (cond-map? first)
+          (list
+            (make-lambda
+              (list 'predicate-value)
+              (list
+                (make-if 'predicate-value
+                  (list (cond-map-procedure first) 'predicate-value)
+                  (expand-clauses rest))))
+            (cond-predicate first))
+          (make-if (cond-predicate first)
+                   (sequence->exp (cond-actions first))
+                   (expand-clauses rest)))))))
 
 ;; Testing Predicates
 (define (true? val) (not (false? val)))
@@ -173,23 +187,28 @@
 ;; Operators
 (define (and? exp) (tagged-list? exp 'and))
 (define (eval-and exp env)
-    (let ((first (eval (cadr exp) env)))
-        (if (true? first)
-            (let ((second (eval (caddr exp) env)))
-                (if (true? second)
-                    second
-                    (eval 'false env)))
-            (eval 'false env))))
+  (define (expand-and exp)
+    (let ((first (eval (car exp) env)))
+      (if (not (true? first))
+        (eval 'false env)
+        (if (null? (cdr exp))
+          first
+          (expand-and (cdr exp))))))
+  (if (null? (cdr exp))
+    (eval 'true env)   ; no expressions => true
+    (expand-and (cdr exp))))
+
 
 (define (or? exp) (tagged-list? exp 'or))
 (define (eval-or exp env)
-    (let ((first (eval (cadr exp) env)))
+  (define (expand-or exp)
+    (if (null? exp)
+      (eval 'false env)
+      (let ((first (eval (car exp) env)))
         (if (true? first)
-            first
-            (let ((second (eval (caddr exp) env)))
-                (if (true? second)
-                    second
-                    (eval 'false env))))))
+          first
+          (expand-or (cdr exp))))))
+  (expand-or (cdr exp)))
 
 ;; Evaluator Data Structures
 (define (make-procedure parameters body env)
@@ -197,7 +216,7 @@
 (define (compound-procedure? p) (tagged-list? p 'procedure))
 (define (procedure-parameters p) (cadr p))
 (define (procedure-body p) (caddr p))
-(define (procedure-environment p) (caddr p))
+(define (procedure-environment p) (cadddr p))
 
 ; Environment Procedures
 (define (enclosing-environment env) (cdr env))
@@ -264,6 +283,7 @@
   (list (list 'car car)
         (list 'cdr cdr)
         (list 'cons cons)
+        (list 'list list)
         (list 'null? null?)
         (list '< <)
         (list '> >)
