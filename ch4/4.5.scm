@@ -21,11 +21,13 @@
 ;
 ; Here's the current implementation of cond:
 
+(define (cond? exp) (tagged-list? exp 'cond))
 (define (cond-clauses exp) (cdr exp))
-(define (cond-predicate clause) (car clause))
-(define (cond-actions clause) (cdr clause))
 (define (cond-else-clause? clause)
   (eq? (cond-predicate clause) 'else))
+(define (cond-predicate clause) (car clause))
+(define (cond-actions clause) (cdr clause))
+
 (define (cond->if exp)
   (expand-clauses (cond-clauses exp)))
 (define (expand-clauses clauses)
@@ -51,8 +53,8 @@
 (define (make-begin seq) (cons 'begin seq))
 
 ; Here we can see it in action:
-1 ]=> (eval (cond->if (list 'cond (list 'false 'a)(list 'true 'b)(list 'else 'c))) 'env)
-;Value: b
+1 ]=> (eval (cond->if (list 'cond (list 'false 1)(list 'true 2)(list 'else 3))) the-global-environment)
+;Value: 2
 
 ; So how do we insert our mapping cond clauses? We should be able to check
 ; the clause and see if it's a mapping (=>) clause, and if so, handle it a bit
@@ -82,22 +84,24 @@
                    (sequence->exp (cond-actions first))
                    (expand-clauses rest)))))))
 
-; OK, now we're identifying our => clauses. But what do we do with them? We need
-; a way to communicate the result of evaluating the predicate to the procedure
-; in the consequent. We'll do this by wrapping make-if in a let statement and
-; introduce a variable that both the predicate and consequent have access to.
-; The predicate will set it and the consequent will use it as its argument.
-; We'll wrap both predicate and consequent in lambdas since we want to delay
-; evaluating them until the if statements are evaluated, not in constructing
-; the if statement to begin with. Also, we only want to evaluate the predicate
-; once!
+; Let's note a couple things here. First, we don't want to evaluate the
+; predicate more than once. That would be inefficient, and what if evaluating
+; the predicate mutates data? That removes the obvious solution:
+
+(make-if (cond-predicate first)
+         (list (cond-map-procedure first) (cond-predicate first))
+         (expand-clauses rest))
+
+; Second, we represent procedure application as a compound expression that
+; is not one of the special forms or derived expressions that the evaluator
+; is looking for. It is a two element list, the first element being the
+; operator and the second being a list of operands.
 ;
-; However, we haven't implemented a representation for lambdas yet, so we'll
-; mock that out in eval. Nothing too complicated. Just wrap lambdas in list
-; so they look like other expressions our eval handles. Then have procedures
-; be self-evaluating so that eval resolves the operator of the lambda expression
-; to itself and then applies it. (We'll probably have to reverse these changes
-; to eval later, as we build it out.)
+; To get around evaluating the predicate twice, we'll use the technique we
+; discussing in exercise 4.4. We'll create a lambda and pass the predicate
+; as an argument to the lambda. The predicate will be evaluated once on
+; being passed to the lambda. Inside the lambda, we'll have an if that tests
+; the predicate and does the right branching bsed on that value.
 
 (define (expand-clauses clauses)
   (if (null? clauses)
@@ -109,31 +113,24 @@
           (sequence->exp (cond-actions first))
           (error "ELSE clause isn't last -- COND->IF" clauses))
         (if (cond-map? first)
-          (let ((predicate-value false))
-            (make-if
-              (list (lambda () ; gets passed to eval, which is expecting a list
-                      (set! predicate-value (cond-predicate first))
-                        predicate-value))
-              (list (lambda ()
-                      ((cond-map-procedure first) predicate-value)))
-              (expand-clauses rest)))
+          (list
+            (make-lambda
+              (list 'predicate-value)
+              (list
+                (make-if 'predicate-value
+                  (list (cond-map-procedure first) 'predicate-value)
+                  (expand-clauses rest))))
+            (cond-predicate first))
           (make-if (cond-predicate first)
                    (sequence->exp (cond-actions first))
                    (expand-clauses rest)))))))
 
+; And here we go:
 
-(put 'cond 'eval (lambda (exp env)
-  (eval (cond->if exp) env)))
-
-; And it works!
-1 ]=> (eval (cond->if (list 'cond (list 'true 'a)(list '(hello goodbye) '=> car)(list 'else 'c))) 'env)
-;Value: a
-
-1 ]=> (eval (cond->if (list 'cond (list 'false 'a)(list '(hello goodbye) '=> car)(list 'else 'c))) 'env)
-;Value: hello
-
-1 ]=> (eval (cond->if (list 'cond (list 'false 'a)(list 'false '=> car)(list 'else 'c))) 'env)
-;Value: c
-
-
+;;; M-Eval input: (cond (true 1)((list 2 3) => cdr)(else 4))
+;;; M-Eval value: 1
+;;; M-Eval input: (cond (false 1)((list 2 3) => cdr)(else 4))
+;;; M-Eval value: (3)
+;;; M-Eval input: (cond (false 1)(false => cdr)(else 4))
+;;; M-Eval value: 4
 
