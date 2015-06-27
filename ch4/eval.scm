@@ -15,7 +15,8 @@
         ((begin? exp)
           (eval-sequence (begin-actions exp) env))
         ((cond? exp) (eval (cond->if exp) env))
-        ((let? exp) (eval (let->lambda exp) env))
+        ((let? exp) (eval (let->derived exp) env))
+        ((let*? exp) (eval (let*->nested-lets exp) env))
         ((application? exp)
           (apply-new (eval (operator exp) env)
                  (list-of-values (operands exp) env)))
@@ -105,6 +106,9 @@
     (make-lambda (cdadr exp)   ; parameters
                  (cddr exp)))) ; body
 
+(define (make-define var value)
+  (cons 'define (cons var value)))
+
 (define (lambda? exp) (tagged-list? exp 'lambda))
 (define (lambda-parameters exp) (cadr exp))
 (define (lambda-body exp) (cddr exp))
@@ -182,14 +186,60 @@
 
 ; Let
 (define (let? exp) (tagged-list? exp 'let))
-(define (let-bindings exp) (cadr exp))
-(define (let-body exp) (cddr exp))
+; (define (let-bindings exp) (cadr exp))
+; (define (let-body exp) (cddr exp))
+(define (named-let? exp)
+(not (pair? (cadr exp))))
+
+(define (let-bindings exp)
+  (if (named-let? exp)
+    (caddr exp)
+    (cadr exp)))
+(define (let-body exp)
+  (if (named-let? exp)
+    (cdddr exp)
+    (cddr exp)))
+
+(define (let->derived exp)
+  (if (named-let? exp)
+    (let->combination exp)
+    (let->lambda exp)))
+
 (define (let->lambda exp)
   (cons   ; use cons so args are not nested: ((lambda (param1 param2) body1 body2) arg1 arg2)
     (make-lambda
       (map car (let-bindings exp))
       (let-body exp))
     (map cadr (let-bindings exp))))
+
+
+(define (let*? exp) (tagged-list? exp 'let*))
+(define (make-let bindings body)
+  (cons 'let (cons bindings body))) ;('let (param1 param2) exp1 exp2)
+
+(define (let*->nested-lets exp)
+  (make-let
+    (list (car (let-bindings exp)))
+    (if (null? (cdr (let-bindings exp)))
+      (let-body exp)
+      (list (let*->nested-lets
+        (cons 'let*
+              (cons (cdr (let-bindings exp))
+                    (let-body exp))))))))
+
+
+(define (let->combination exp)
+  (define (parameters exp)
+    (map car (let-bindings exp)))
+  (define (initial-argurments exp)
+    (map cadr (let-bindings exp)))
+  (let ((proc-name (cadr exp)))
+    (make-begin
+      (list  ; define procedure for named let and then call that procedure
+        (make-define
+          (cons proc-name (parameters exp))  ; (procname p1 p2 p3)
+          (let-body exp))
+        (cons proc-name (initial-argurments exp))))))
 
 ;; Testing Predicates
 (define (true? val) (not (false? val)))
@@ -296,9 +346,11 @@
         (list 'cons cons)
         (list 'list list)
         (list 'null? null?)
+        (list '= =)
         (list '< <)
         (list '> >)
         (list '+ +)
+        (list '- -)
         (list 'symbol? symbol?)
         ; ... we can add more
         ))

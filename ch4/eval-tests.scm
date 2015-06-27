@@ -128,6 +128,33 @@
           (+ a b)))
        3)
 
+(test '(let* ((a 1)) a) 1)
+(test '(let* ((a 1) (b 2)) (+ a b)) 3)
+(test '(let* ((a 1) (b (+ a 1)))  ; b defined in reference to a
+            (+ a b))
+        3)
+(test '(let* ((a 1)
+              (b (+ a 1))
+              (c (+ b 1)))
+            (+ a b c))
+        6)
+
+(test    ; named let
+  '(begin
+    (define (fib n)
+      (let fib-iter ((a 1)
+                     (b 0)
+                     (count n))
+        (if (= count 0)
+          b
+          (fib-iter (+ a b) a (- count 1)))))
+    (fib 6))
+  8)
+
+
+
+
+
 
 
 'ok
