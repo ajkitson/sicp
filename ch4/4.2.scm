@@ -26,13 +26,11 @@
 ; expression types are also represented as pairs and will pass this test. So
 ; if we put it first, we never get to the other checks--everything passes
 ; the application? check and is treated as a procedure application. Not good.
-; FWIW, this seems fragile to me. It's not clear in the body of eval that the
-; order matters and I agree with Louis that it'd be nice if it didn't.
 ;
 ; b. We'll help Louis update eval so it'll evaluate procedure application first.
 ;    We need a way to indicate that an exp is a procedure application
 ;    (previously it was procedure application if it wasn't anything else).
-;    So we use the 'call' tag.
+;    So we use the 'call tag.
 ;
 ; We'll start by moving the application check up in eval. We'll omit the other
 ; type checks for brevity, except self-evaluating? since we need to eventually
@@ -60,8 +58,9 @@
         false))
 
 ; Oh, and can't forget self-evaluating?! I'm adding a procedure? check to it...
-; It's not in the book, but I'm not sure how we resolve the eval on operator
-; in the application block otherwise. That is, we need + to be self-evaluating.
+; We won't need this once we implement the data-directed version, but the
+; book so far has only halfway implemented the apply step and this let's
+; us easily pretend we've got the full implementation
 (define (self-evaluating? exp)
     (cond
         ((number? exp) true)

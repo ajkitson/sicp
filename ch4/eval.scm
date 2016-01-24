@@ -17,6 +17,7 @@
         ((cond? exp) (eval (cond->if exp) env))
         ((let? exp) (eval (let->derived exp) env))
         ((let*? exp) (eval (let*->nested-lets exp) env))
+        ((while? exp) (eval (while->derived exp) env))
         ((application? exp)
           (apply-new (eval (operator exp) env)
                  (list-of-values (operands exp) env)))
@@ -227,7 +228,6 @@
               (cons (cdr (let-bindings exp))
                     (let-body exp))))))))
 
-
 (define (let->combination exp)
   (define (parameters exp)
     (map car (let-bindings exp)))
@@ -240,6 +240,46 @@
           (cons proc-name (parameters exp))  ; (procname p1 p2 p3)
           (let-body exp))
         (cons proc-name (initial-argurments exp))))))
+
+
+(define (while? exp) (tagged-list? exp 'while))
+(define (while->derived exp)
+  (define (while-condition exp) (cadr exp))
+  (define (while-body exp) (cddr exp))
+  (make-begin
+    (list
+      ; 1. define our loop
+      (make-define '(loop)
+        (list
+          (make-if (while-condition exp)
+            (make-begin
+              (list
+                (make-begin (while-body exp))
+                '(loop))) ; recursively call our loop
+                "done")))
+      ; 2. enter our loop
+      '(loop))))
+
+
+;(define (while? exp) (tagged-list? exp 'while))
+;(define (while->derived exp)
+;  (define (while-condition exp) (cadr exp))
+;  (define (while-body exp) (cddr exp))
+;  (define (loop condition body)
+;    (display "condition")
+;    (display condition)
+;    (display "body")
+;    (display body)
+;    (make-if
+;      condition
+;      (make-begin
+;        (list
+;          (make-begin body)
+;          '(loop condition body)))
+;      "done"))
+;  (loop
+;    (while-condition exp)
+;    (while-body exp)))
 
 ;; Testing Predicates
 (define (true? val) (not (false? val)))
@@ -302,10 +342,11 @@
 (define (lookup-variable-value var base-env)
   (define (env-loop env)
     (define (scan vars vals)
-      (cond ((null? vars)
-              (env-loop (enclosing-environment env)))
-            ((eq? var (car vars)) (car vals))
-            (else (scan (cdr vars) (cdr vals)))))
+      (cond
+        ((null? vars)
+          (env-loop (enclosing-environment env)))
+        ((eq? var (car vars)) (car vals))
+        (else (scan (cdr vars) (cdr vals)))))
     (if (eq? env the-empty-environment)
         (error "Unbound variable -- LOOKUP" var)
         (let ((frame (first-frame env)))
@@ -352,6 +393,8 @@
         (list '+ +)
         (list '- -)
         (list 'symbol? symbol?)
+        (list 'display display)
+        (list 'newline newline)
         ; ... we can add more
         ))
 (define (primitive-procedure-names)

@@ -1,4 +1,4 @@
-; "Named let" is a varient of let that has the form
+; "Named let" is a variant of let that has the form
 
 ; (let <var> <bindings> <body>)
 

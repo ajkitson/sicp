@@ -41,7 +41,7 @@
 (define (eval-or exp env)
   (define (expand-or exp)
     (if (null? exp)
-      false
+      'false
       (let ((first (eval (car exp) env)))
         (if (true? first)
           first

@@ -13,7 +13,7 @@
 ; non-compound expressions. For those, we'll need special checks. Also, if
 ; we're not tagging procedure application like Louis wanted in 3.1 (and I
 ; don't think we should), we can't just default to the procedure in the table
-; lookup. Intead, we'll have to check the table for a procedure and apply it
+; lookup. Instead, we'll have to check the table for a procedure and apply it
 ; if we find one, but if not, do the application? check. Also, we're stripping
 ; the tag before passing it along to the handling code.
 ;
@@ -22,7 +22,8 @@
     (cond
         ((self-evaluating? exp) exp)
         ((variable? exp) exp)
-        (else (let ((eval-proc (get (operator exp) 'eval)))
+        (else
+          (let ((eval-proc (get (operator exp) 'eval)))
             (cond (eval-proc
                     ; (display (eq? eval-proc eval-if))
                     (eval-proc (operands exp) env))
@@ -41,9 +42,8 @@
 1 ]=> (eval (list list 1 2 3) 'env)
 ;Value 2: (1 2 3)
 
-; I'm using list here because the expression is supposed to be a list. If I try
-; to pass the expression itself as a parameter mit-scheme (the interpreter our
-; interpreter is running in) evaluates it before we can do anything with it.
+; I'm using list here because eval expects our language to be represented as a
+; list. We're really evaulating `(+ 1 2 3) and `(list 1 2 3).
 ;
 ; Now we can update the table to handle evaluating some other stuff. We'll do
 ; if since it doesn't depend on the environment for evaluation (SICP hasn't yet

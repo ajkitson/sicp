@@ -103,7 +103,6 @@
         (add1 1))
       2)
 
-
 ; Assignment
 (log "***ASSIGNMENT")
 (test '(begin (set! a 3) a) 3)
@@ -153,9 +152,20 @@
 
 
 
+(log "***LOOPS***")
+(log "**While**")
+(test
+  '(let ((a 0))
+    (while (< a 10) (set! a (+ a 1)))
+    a)
+  10)
 
 
-
+(test
+  '(let ((a 0))
+    (while false (set! a (+ a 1)))
+    a)
+  0)
 
 'ok
 

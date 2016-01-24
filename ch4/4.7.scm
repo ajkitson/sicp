@@ -67,7 +67,7 @@
 ; following in eval to handle let*?
 ; (eval (let*->nested-lets exp) env)
 
-; It is. Each let extends the environment fo those nested within it. At first,
+; It is. Each let extends the environment of those nested within it. At first,
 ; I thought this might require separate calls to eval with a new environment each
 ; time. But it doesn't. Or rather, if it does, it will require that same work
 ; whehter we convert let* to a set of nested lets or whether we write out
