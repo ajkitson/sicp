@@ -160,12 +160,40 @@
     a)
   10)
 
-
 (test
   '(let ((a 0))
     (while false (set! a (+ a 1)))
     a)
   0)
+
+(log "**Until**")
+(test
+  '(let ((a 0))
+    (until (> a 10) (set! a (+ a 1)))
+    a)
+  11)
+
+(test
+  '(let ((a 0))
+    (until true (set! a (+ a 1)))
+    a)
+  0)
+
+(log "**Do**")
+(test
+  '(let ((a 0))
+    (do (< a 10) (set! a (+ a 1)))
+    a)
+  10)
+
+(test
+  '(let ((a 0))
+    (do false (set! a (+ a 1)))
+    a)
+  1) ; runs once always
+
+
+
 
 'ok
 

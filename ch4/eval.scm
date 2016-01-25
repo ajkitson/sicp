@@ -18,6 +18,8 @@
         ((let? exp) (eval (let->derived exp) env))
         ((let*? exp) (eval (let*->nested-lets exp) env))
         ((while? exp) (eval (while->derived exp) env))
+        ((until? exp) (eval (until->derived exp) env))
+        ((do? exp) (eval (do->derived exp) env))
         ((application? exp)
           (apply-new (eval (operator exp) env)
                  (list-of-values (operands exp) env)))
@@ -260,26 +262,30 @@
       ; 2. enter our loop
       '(loop))))
 
+; Until
+(define (until? exp) (tagged-list? exp 'until))
+(define (until->derived exp)
+  (define (until-condition exp) (cadr exp))
+  (define (until-body exp) (cddr exp))
+  (while->derived (cons 'while (cons
+    (list 'not (until-condition exp)) ; wrap the condition in a not
+    (until-body exp)))))
 
-;(define (while? exp) (tagged-list? exp 'while))
-;(define (while->derived exp)
-;  (define (while-condition exp) (cadr exp))
-;  (define (while-body exp) (cddr exp))
-;  (define (loop condition body)
-;    (display "condition")
-;    (display condition)
-;    (display "body")
-;    (display body)
-;    (make-if
-;      condition
-;      (make-begin
-;        (list
-;          (make-begin body)
-;          '(loop condition body)))
-;      "done"))
-;  (loop
-;    (while-condition exp)
-;    (while-body exp)))
+; Do-while
+(define (do? exp) (tagged-list? exp 'do))
+(define (do->derived exp)
+  (define (do-condition exp) (cadr exp))
+  (define (do-body exp) (cddr exp))
+  (make-begin (list
+    ; 1. define our loop
+    (make-define '(loop) (list
+      (make-begin (do-body exp))
+      (make-if (do-condition exp)
+        '(loop) ; recursively call our loop
+        "done")))
+    ; 2. enter our loop
+    '(loop))))
+
 
 ;; Testing Predicates
 (define (true? val) (not (false? val)))
@@ -387,6 +393,7 @@
         (list 'cons cons)
         (list 'list list)
         (list 'null? null?)
+        (list 'not not)
         (list '= =)
         (list '< <)
         (list '> >)
