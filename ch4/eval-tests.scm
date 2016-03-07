@@ -86,11 +86,11 @@
         (else 3))
       "hello")
 
-(test '(cond
-        (false 1)
-        ((and (list 1 2) false) => car)
-        (else 3))
-      3)
+;(test '(cond
+;        (false 1)
+;        ((and (list 1 2) false) => car)
+;        (else 3))
+;      3)
 
 ; Definition
 (log "***DEFINITION***")
@@ -192,8 +192,26 @@
     a)
   1) ; runs once always
 
+(log "**Nested Defines**")
+(test
+  '(begin
+    (define (three)
+      (define a 1)
+      (define b 2)
+      (+ a b))
+    (three))
+  3)
 
-
-
+(test
+  '(begin
+    (define (odd? n)
+      (if (= n 0)
+        false
+        (even? (- n 1))))
+    (define (even? n)
+      (if (= n 0)
+        true
+        (odd? (- n 1))))
+    (odd? 5))
+  true)
 'ok
-

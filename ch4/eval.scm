@@ -1,7 +1,16 @@
 (define apply-in-underlying-scheme apply)
 
+(define (show title val)
+  (if debug
+    (begin
+      (newline)
+      (display title)
+      (display ": ")
+      (display val))))
+
 ;; EVAL
 (define (eval exp env)
+  (show "expression" exp)
   (cond ((self-evaluating? exp) exp)
         ((variable? exp) (lookup-variable-value exp env))
         ((quoted? exp) (text-of-quotation exp))
@@ -76,6 +85,7 @@
   (cond ((number? exp) true)
         ((string? exp) true)
         ((boolean? exp) true) ; not in book, but needed for now...
+        ((and (symbol? exp) (eq? exp '*unassigned*))) ; otherwise we try to treat this as a variable...
         (else false)))
 
 (define (variable? exp) (symbol? exp))
@@ -104,6 +114,8 @@
     (caadr exp))) ; (define (proc a1 a1) body)
 
 (define (definition-value exp)
+  (show " def value" exp)
+
   (if (symbol? (cadr exp))
     (caddr exp)
     (make-lambda (cdadr exp)   ; parameters
@@ -218,7 +230,7 @@
 
 (define (let*? exp) (tagged-list? exp 'let*))
 (define (make-let bindings body)
-  (cons 'let (cons bindings body))) ;('let (param1 param2) exp1 exp2)
+  (cons 'let (cons bindings body))) ;('let ((param1 val1) (param2 val2) ...) exp1 exp2 ...)
 
 (define (let*->nested-lets exp)
   (make-let
@@ -319,11 +331,37 @@
 
 ;; Evaluator Data Structures
 (define (make-procedure parameters body env)
-  (list 'procedure parameters body env))
+  (list 'procedure parameters (scan-out-defines body) env))
 (define (compound-procedure? p) (tagged-list? p 'procedure))
 (define (procedure-parameters p) (cadr p))
 (define (procedure-body p) (caddr p))
 (define (procedure-environment p) (cadddr p))
+
+; simultaneous variable assignment
+(define (scan-out-defines body)
+  (show "scanning out body" body)
+  (let ; split out define statements and the non-definition statements
+    ((define-statements (filter definition? body))
+     (body-statements (filter (lambda (s) (not (definition? s))) body)))
+
+     (show "define-statements" define-statements)
+     (show "body-statements" body-statements)
+
+     (if (null? define-statements)
+       body ; if there are no define-statements, just use the original body
+
+       (let ; get the definition variables and expressions
+        ((variables (map definition-variable define-statements))
+         (expressions (map definition-value define-statements)))
+         (let ((
+           ret (make-let
+             (map (lambda (v) (list v '*unassigned*)) variables) ; bindings
+               (append ; body: set!s for variable assignment and then the rest of the body
+                 (map (lambda (s) (cons 'set! s)) (zip variables expressions))
+                 body-statements))))
+                 (show "scanned out" ret)
+                 (list ret))) ; receives a list of expressions, and so must return a list of expressions
+           )))
 
 ; Environment Procedures
 (define (enclosing-environment env) (cdr env))
@@ -351,7 +389,10 @@
       (cond
         ((null? vars)
           (env-loop (enclosing-environment env)))
-        ((eq? var (car vars)) (car vals))
+        ((eq? var (car vars))
+          (if (eq? (car vals) '*unassigned*)
+            (error "Variable accessed before it has been defined" var)
+            (car vals)))
         (else (scan (cdr vars) (cdr vals)))))
     (if (eq? env the-empty-environment)
         (error "Unbound variable -- LOOKUP" var)
